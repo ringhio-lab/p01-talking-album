@@ -1,0 +1,15 @@
+# 個人データを絶対にコミットしない（写真・音声は端末のIndexedDBにのみ置く）
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.mp4
+*.m4a
+*.webm
+*.mp3
+# アイコンだけは例外（個人データではない）
+!icon-180.png
+!icon-512.png
+
+.DS_Store
+node_modules/
