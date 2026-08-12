@@ -3,7 +3,7 @@
 // 写真と音声は端末のIndexedDBだけに置く。外部サーバーには送信しない。
 const DB_NAME = 'talking-album';
 const STORE = 'items';
-const MAX_ITEMS = 20;
+const MAX_ITEMS = 30;
 const MAX_IMAGE_EDGE = 1600;
 const RECORDING_LIMIT_MS = 10000;
 
@@ -53,6 +53,11 @@ const parent = document.getElementById('parent');
 const statusEl = document.getElementById('status');
 const listEl = document.getElementById('list');
 const parentCount = document.getElementById('parentCount');
+const childTools = document.getElementById('childTools');
+const categorySelect = document.getElementById('categorySelect');
+const quizModeButton = document.getElementById('quizMode');
+const slideModeButton = document.getElementById('slideMode');
+const modeMessage = document.getElementById('modeMessage');
 const urls = [];
 const listUrls = [];
 let audio = null;
@@ -61,9 +66,36 @@ let activeAudioUrl = null;
 let audioContext = null;
 let activeSources = [];
 const DEFAULT_VOICE = { rate: 1, pitch: 0, pattern: 'once', preset: 'normal' };
+const CATEGORIES = [
+  ['all','🌈 ぜんぶ'], ['family','👨‍👩‍👦 かぞく'], ['animal','🐶 どうぶつ'],
+  ['food','🍎 たべもの'], ['vehicle','🚗 のりもの'], ['favorite','⭐ おきにいり'], ['other','🎈 そのほか'],
+];
+const SPEECH_PRESETS = {
+  woman: { rate: 1.02, pitch: 1.25, repeat: 1 }, man: { rate: .9, pitch: .78, repeat: 1 },
+  baby: { rate: 1.2, pitch: 1.75, repeat: 2 }, anime: { rate: 1.12, pitch: 1.5, repeat: 1 },
+  robot: { rate: .78, pitch: .72, repeat: 2 }, monster: { rate: .68, pitch: .45, repeat: 1 },
+  slow: { rate: .7, pitch: 1, repeat: 1 }, random: { rate: 1, pitch: 1, repeat: 1 },
+};
+let selectedCategory = 'all';
+let quizTargetId = null;
+let slideshowTimer = null;
+let slideshowIndex = 0;
 
 function voiceOf(item) {
   return { ...DEFAULT_VOICE, ...(item.voice || {}) };
+}
+
+function categoryLabel(value) {
+  return CATEGORIES.find(([key]) => key === value)?.[1] || CATEGORIES.at(-1)[1];
+}
+
+function hasSound(item) { return Boolean(item.audio || item.speech?.text); }
+
+function showModeMessage(message, duration = 1700) {
+  modeMessage.textContent = message;
+  modeMessage.classList.add('on');
+  clearTimeout(showModeMessage.timer);
+  showModeMessage.timer = setTimeout(() => modeMessage.classList.remove('on'), duration);
 }
 
 function setStatus(message) { statusEl.textContent = message; }
@@ -78,23 +110,81 @@ async function renderGrid() {
   revokeAll(urls);
   const items = await db.all();
   grid.innerHTML = '';
+  const filtered = selectedCategory === 'all' ? items : items.filter(item => (item.category || 'other') === selectedCategory);
   empty.hidden = items.length > 0;
+  childTools.classList.toggle('on', items.length > 0);
+  categorySelect.innerHTML = CATEGORIES.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+  categorySelect.value = selectedCategory;
 
-  for (const [index, item] of items.entries()) {
+  for (const [index, item] of filtered.entries()) {
     const button = document.createElement('button');
     button.className = 'card';
     button.style.setProperty('--index', index);
-    button.setAttribute('aria-label', item.audio ? '写真を見る、声あり' : '写真を見る、声なし');
+    button.setAttribute('aria-label', item.name ? `${item.name}の写真` : hasSound(item) ? '写真を見る、声あり' : '写真を見る、声なし');
     const image = document.createElement('img');
     image.src = objectUrl(item.image);
     image.alt = '';
     button.appendChild(image);
-    button.addEventListener('click', () => play(item, button, image.src));
+    button.addEventListener('click', () => handleCardTap(item, button, image.src));
     grid.appendChild(button);
   }
 }
 
+categorySelect.addEventListener('change', () => {
+  selectedCategory = categorySelect.value;
+  stopSlideshow();
+  quizTargetId = null;
+  quizModeButton.classList.remove('active');
+  renderGrid();
+});
+
+function visibleItems(items) {
+  return selectedCategory === 'all' ? items : items.filter(item => (item.category || 'other') === selectedCategory);
+}
+
+function speechSettings(speech) {
+  let preset = speech?.preset || 'woman';
+  if (preset === 'random') {
+    const choices = Object.keys(SPEECH_PRESETS).filter(key => key !== 'random');
+    preset = choices[Math.floor(Math.random() * choices.length)];
+  }
+  return { ...SPEECH_PRESETS[preset], ...(speech || {}), preset };
+}
+
+function speakText(text, speech = {}, onEnded = () => {}) {
+  if (!('speechSynthesis' in window) || !text?.trim()) { onEnded(); return; }
+  const settings = speechSettings(speech);
+  const voices = speechSynthesis.getVoices();
+  const japanese = voices.filter(voice => /^ja/i.test(voice.lang));
+  const voice = japanese[settings.preset === 'man' || settings.preset === 'monster' ? 1 : 0] || japanese[0];
+  let remaining = Math.max(1, settings.repeat || 1);
+  const next = () => {
+    const utterance = new SpeechSynthesisUtterance(text.trim());
+    utterance.lang = 'ja-JP';
+    utterance.rate = settings.rate;
+    utterance.pitch = settings.pitch;
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => { remaining -= 1; remaining ? next() : onEnded(); };
+    utterance.onerror = onEnded;
+    speechSynthesis.speak(utterance);
+  };
+  next();
+}
+
+function playItemSound(item, onEnded = () => {}) {
+  if (item.soundMode === 'speech' && item.speech?.text) {
+    speakText(item.speech.text, item.speech, onEnded);
+  } else if (item.audio) {
+    playVoice(item.audio, voiceOf(item), onEnded);
+  } else if (item.speech?.text) {
+    speakText(item.speech.text, item.speech, onEnded);
+  } else {
+    onEnded();
+  }
+}
+
 function stopPlayback() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   activeSources.splice(0).forEach(source => { try { source.stop(); } catch (_) {} });
   if (audio) {
     audio.pause();
@@ -169,15 +259,86 @@ function play(item, card, src) {
   card.classList.add('playing');
   celebrate(card);
 
-  if (!item.audio) {
+  if (!hasSound(item)) {
     card.classList.remove('playing');
     return;
   }
 
-  playVoice(item.audio, voiceOf(item), () => { card.classList.remove('playing'); stopPlayback(); });
+  playItemSound(item, () => { card.classList.remove('playing'); stopPlayback(); });
 }
 
+function handleCardTap(item, card, src) {
+  if (quizTargetId !== null && item.id !== quizTargetId) {
+    card.classList.add('quiz-wrong');
+    setTimeout(() => card.classList.remove('quiz-wrong'), 500);
+    showModeMessage('おしい！ もういちど 😊');
+    return;
+  }
+  if (quizTargetId === item.id) {
+    quizTargetId = null;
+    showModeMessage('せいかい！ 🎉');
+    play(item, card, src);
+    setTimeout(startQuizRound, 2200);
+    return;
+  }
+  play(item, card, src);
+}
+
+async function startQuizRound() {
+  if (!quizModeButton.classList.contains('active')) return;
+  const candidates = visibleItems(await db.all()).filter(item => item.name?.trim());
+  if (candidates.length < 2) {
+    quizModeButton.classList.remove('active');
+    quizTargetId = null;
+    showModeMessage('名前つきの写真を2枚以上にしてね', 2600);
+    return;
+  }
+  const target = candidates[Math.floor(Math.random() * candidates.length)];
+  quizTargetId = target.id;
+  const question = `${target.name}は、どれかな？`;
+  showModeMessage(question, 3000);
+  speakText(question, { preset: 'woman', rate: .9, pitch: 1.15 });
+}
+
+quizModeButton.addEventListener('click', () => {
+  stopSlideshow();
+  quizModeButton.classList.toggle('active');
+  quizTargetId = null;
+  if (quizModeButton.classList.contains('active')) startQuizRound();
+  else { stopPlayback(); showModeMessage('クイズをおわりました'); }
+});
+
+async function runSlideshow() {
+  if (!slideshowTimer) return;
+  const visible = visibleItems(await db.all());
+  const cards = [...grid.querySelectorAll('.card')];
+  const candidates = visible.map((item, index) => ({ item, card: cards[index] })).filter(entry => hasSound(entry.item));
+  if (!candidates.length || !cards.length) { stopSlideshow(); showModeMessage('声つきの写真を追加してね'); return; }
+  const index = slideshowIndex % candidates.length;
+  const { item, card } = candidates[index];
+  play(item, card, card.querySelector('img').src);
+  slideshowIndex += 1;
+  slideshowTimer = setTimeout(runSlideshow, 4000);
+}
+
+function stopSlideshow() {
+  if (slideshowTimer) clearTimeout(slideshowTimer);
+  slideshowTimer = null;
+  slideModeButton.classList.remove('active');
+}
+
+slideModeButton.addEventListener('click', () => {
+  if (slideshowTimer) { stopSlideshow(); stopPlayback(); big.classList.remove('on'); showModeMessage('じどう再生をおわりました'); return; }
+  quizModeButton.classList.remove('active');
+  quizTargetId = null;
+  slideshowIndex = 0;
+  slideModeButton.classList.add('active');
+  slideshowTimer = true;
+  runSlideshow();
+});
+
 big.addEventListener('click', () => {
+  stopSlideshow();
   big.classList.remove('on');
   stopPlayback();
 });
@@ -214,13 +375,13 @@ function armLongPress(element) {
   element.addEventListener('mouseleave', cancel);
   element.addEventListener('click', event => event.preventDefault());
 }
-
 armLongPress(parentEntry);
 
 function openParent() {
   parentEntry.classList.add('hint-seen');
   try { localStorage.setItem('talking-album-parent-hint-seen', '1'); } catch (_) {}
   stopPlayback();
+  stopSlideshow();
   big.classList.remove('on');
   parent.classList.add('on');
   setStatus('');
@@ -283,7 +444,7 @@ document.getElementById('pick').addEventListener('change', async event => {
   let added = 0;
   for (const file of selected) {
     try {
-      await db.add({ image: await prepareImage(file), audio: null, name: '', voice: { ...DEFAULT_VOICE } });
+      await db.add({ image: await prepareImage(file), audio: null, name: '', category: 'other', speech: null, soundMode: 'recording', voice: { ...DEFAULT_VOICE } });
       added += 1;
     } catch (_) {
       setStatus('開けない写真がありました');
@@ -320,22 +481,32 @@ async function renderList() {
     const meta = document.createElement('div');
     meta.className = 'meta';
     const voiceState = document.createElement('span');
-    voiceState.className = `voice-state${item.audio ? ' has-voice' : ''}`;
-    voiceState.textContent = item.audio ? '声を録音済み' : '声はまだありません';
+    const title = document.createElement('strong');
+    title.className = 'item-title';
+    title.textContent = item.name || '名前なし';
+    meta.appendChild(title);
+    voiceState.className = `voice-state${hasSound(item) ? ' has-voice' : ''}`;
+    voiceState.textContent = item.soundMode === 'speech' && item.speech?.text ? '文字の声を使用中' : item.audio ? '録音した声を使用中' : item.speech?.text ? '文字の声あり' : '声はまだありません';
     meta.appendChild(voiceState);
+    const category = document.createElement('span');
+    category.className = 'category-badge';
+    category.textContent = categoryLabel(item.category || 'other');
+    meta.appendChild(category);
     row.appendChild(meta);
 
     const controls = document.createElement('div');
     controls.className = 'controls';
 
-    if (item.audio) {
+    if (hasSound(item)) {
       const listen = document.createElement('button');
       listen.textContent = '▶ 声を聞く';
       listen.dataset.idleLabel = '▶ 声を聞く';
       listen.className = 'play-button';
-      listen.addEventListener('click', () => togglePlayback(item.audio, listen, voiceOf(item)));
+      listen.addEventListener('click', () => toggleItemPlayback(item, listen));
       controls.appendChild(listen);
+    }
 
+    if (item.audio) {
       const voicePlay = document.createElement('button');
       voicePlay.textContent = '✨ 声のあそび';
       voicePlay.className = 'voice-play';
@@ -348,6 +519,12 @@ async function renderList() {
     record.addEventListener('click', () => beginRecording(item));
     controls.appendChild(record);
 
+    const speechEdit = document.createElement('button');
+    speechEdit.textContent = item.speech?.text ? '✎ 文字の声を編集' : '⌨ 文字から声';
+    speechEdit.className = 'speech-edit';
+    speechEdit.addEventListener('click', () => openSpeechSheet(item));
+    controls.appendChild(speechEdit);
+
     if (item.audio) {
       const removeVoice = document.createElement('button');
       removeVoice.textContent = '声だけ削除';
@@ -356,6 +533,7 @@ async function renderList() {
         if (!window.confirm('録音した声だけを削除しますか？\n写真は残ります。')) return;
         stopPlayback();
         item.audio = null;
+        item.soundMode = item.speech?.text ? 'speech' : '';
         await db.put(item);
         await renderList();
         setStatus('声だけ削除しました。写真は残っています');
@@ -393,6 +571,15 @@ function togglePlayback(blob, button, settings = DEFAULT_VOICE) {
     stopPlayback();
     setStatus('声を再生できませんでした');
   });
+}
+
+function toggleItemPlayback(item, button) {
+  if (activePlaybackButton === button) { stopPlayback(); return; }
+  stopPlayback();
+  activePlaybackButton = button;
+  button.textContent = '■ 停止';
+  button.classList.add('playing-audio');
+  playItemSound(item, stopPlayback);
 }
 
 // --- 声の高さ・速さ・再生パターン ---
@@ -492,6 +679,79 @@ voiceSave.addEventListener('click', async () => {
 });
 
 voiceCancel.addEventListener('click', closeVoiceSheet);
+
+// --- 文字から読み上げる声 ---
+const speechSheet = document.getElementById('speechSheet');
+const speechName = document.getElementById('speechName');
+const speechText = document.getElementById('speechText');
+const speechCategory = document.getElementById('speechCategory');
+const speechTry = document.getElementById('speechTry');
+const speechSave = document.getElementById('speechSave');
+const speechRemove = document.getElementById('speechRemove');
+const speechCancel = document.getElementById('speechCancel');
+let speechEditingItem = null;
+let speechPreset = 'woman';
+
+function renderSpeechPreset() {
+  document.querySelectorAll('.speech-preset').forEach(button => button.classList.toggle('selected', button.dataset.speechPreset === speechPreset));
+}
+
+function openSpeechSheet(item) {
+  stopPlayback();
+  speechEditingItem = item;
+  speechName.value = item.name || '';
+  speechText.value = item.speech?.text || item.name || '';
+  speechCategory.innerHTML = CATEGORIES.filter(([key]) => key !== 'all').map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+  speechCategory.value = item.category || 'other';
+  speechPreset = item.speech?.preset || 'woman';
+  renderSpeechPreset();
+  speechSheet.classList.add('on');
+}
+
+function closeSpeechSheet() {
+  stopPlayback();
+  speechSheet.classList.remove('on');
+  speechEditingItem = null;
+}
+
+document.querySelectorAll('.speech-preset').forEach(button => button.addEventListener('click', () => {
+  speechPreset = button.dataset.speechPreset;
+  renderSpeechPreset();
+}));
+
+speechTry.addEventListener('click', () => {
+  const text = speechText.value.trim();
+  if (!text) { setStatus('読み上げることばを入力してください'); return; }
+  stopPlayback();
+  speakText(text, { preset: speechPreset });
+});
+
+speechSave.addEventListener('click', async () => {
+  if (!speechEditingItem) return;
+  const text = speechText.value.trim();
+  if (!text) { setStatus('読み上げることばを入力してください'); speechText.focus(); return; }
+  speechEditingItem.name = speechName.value.trim() || text.replace(/[、。！？!?]/g, '').slice(0, 20);
+  speechEditingItem.category = speechCategory.value;
+  speechEditingItem.speech = { text, preset: speechPreset };
+  speechEditingItem.soundMode = 'speech';
+  await db.put(speechEditingItem);
+  closeSpeechSheet();
+  await renderList();
+  setStatus('文字の声を保存しました。子ども画面ですぐ使えます');
+});
+
+speechRemove.addEventListener('click', async () => {
+  if (!speechEditingItem?.speech) { closeSpeechSheet(); return; }
+  if (!window.confirm('文字から作った声を削除しますか？')) return;
+  speechEditingItem.speech = null;
+  speechEditingItem.soundMode = speechEditingItem.audio ? 'recording' : '';
+  await db.put(speechEditingItem);
+  closeSpeechSheet();
+  await renderList();
+  setStatus('文字の声を削除しました');
+});
+
+speechCancel.addEventListener('click', closeSpeechSheet);
 
 function pickMime() {
   const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
@@ -614,6 +874,7 @@ recordRetry.addEventListener('click', () => {
 recordSave.addEventListener('click', async () => {
   if (!recordingDraft) return;
   recordingDraft.item.audio = recordingDraft.blob;
+  recordingDraft.item.soundMode = 'recording';
   await db.put(recordingDraft.item);
   closeRecordingSheet();
   await renderList();
@@ -656,10 +917,13 @@ document.getElementById('backup').addEventListener('click', async () => {
       image: await blobToDataUrl(item.image),
       audio: item.audio ? await blobToDataUrl(item.audio) : null,
       name: item.name || '',
+      category: item.category || 'other',
+      speech: item.speech || null,
+      soundMode: item.soundMode || (item.audio ? 'recording' : item.speech?.text ? 'speech' : ''),
       voice: voiceOf(item),
     });
   }
-  const payload = JSON.stringify({ app: 'talking-album', version: 1, createdAt: new Date().toISOString(), items: records });
+  const payload = JSON.stringify({ app: 'talking-album', version: 2, createdAt: new Date().toISOString(), items: records });
   const file = new File([payload], `zukan-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
 
   if (navigator.canShare?.({ files: [file] })) {
@@ -689,7 +953,7 @@ document.getElementById('restore').addEventListener('change', async event => {
   setStatus('バックアップを確認しています…');
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'talking-album' || payload.version !== 1 || !Array.isArray(payload.items)) {
+    if (payload.app !== 'talking-album' || ![1, 2].includes(payload.version) || !Array.isArray(payload.items)) {
       throw new Error('このアプリのバックアップではありません');
     }
     if (payload.items.length > MAX_ITEMS) throw new Error(`写真は${MAX_ITEMS}枚までです`);
@@ -699,6 +963,9 @@ document.getElementById('restore').addEventListener('change', async event => {
         image: await dataUrlToBlob(item.image),
         audio: item.audio ? await dataUrlToBlob(item.audio) : null,
         name: typeof item.name === 'string' ? item.name : '',
+        category: CATEGORIES.some(([key]) => key === item.category) ? item.category : 'other',
+        speech: item.speech?.text ? { text: String(item.speech.text).slice(0, 80), preset: SPEECH_PRESETS[item.speech.preset] ? item.speech.preset : 'woman' } : null,
+        soundMode: item.soundMode === 'speech' ? 'speech' : 'recording',
         voice: item.voice && typeof item.voice === 'object' ? { ...DEFAULT_VOICE, ...item.voice } : { ...DEFAULT_VOICE },
       });
     }

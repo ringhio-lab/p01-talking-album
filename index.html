@@ -55,6 +55,21 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px;
     padding-top: calc(12px + env(safe-area-inset-top, 0px));
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  #childTools { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 8; display: none;
+    width: min(calc(100% - 24px),516px); margin: 8px auto 0; padding: 7px; gap: 7px;
+    border: 1px solid rgba(29,27,24,.07); border-radius: 18px; background: rgba(255,253,249,.9);
+    box-shadow: 0 6px 20px rgba(55,47,38,.08); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  #childTools.on { display: grid; grid-template-columns: 1fr auto auto; }
+  #categorySelect { min-width: 0; min-height: 44px; border: 0; border-radius: 13px; padding: 0 10px;
+    background: #f3efe7; color: var(--ink); font: 700 13px inherit; }
+  .kid-mode { width: 46px; min-height: 44px; padding: 0; border: 0; background: #f3efe7; box-shadow: none; font-size: 21px; }
+  .kid-mode.active { background: var(--ink); color: #fff; }
+  #modeMessage { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom,0px)); z-index: 14;
+    max-width: calc(100% - 30px); padding: 11px 16px; border-radius: 999px; background: rgba(29,27,24,.9);
+    color: white; font-size: 13px; font-weight: 750; transform: translate(-50%,18px); opacity: 0;
+    pointer-events: none; transition: .22s; }
+  #modeMessage.on { transform: translate(-50%,0); opacity: 1; }
+  .card.quiz-wrong { animation: wrong-shake .35s ease; }
   .card { position: relative; aspect-ratio: 1; overflow: hidden; padding: 0; border: 0;
     border-radius: 24px; background: #e4dfd6; box-shadow: var(--shadow); cursor: pointer;
     animation: card-in .42s cubic-bezier(.2,.8,.2,1) both;
@@ -141,6 +156,9 @@
     box-shadow: 0 4px 14px rgba(55,47,38,.055); }
   .item img { width: 72px; height: 72px; object-fit: cover; border-radius: 15px; background: #e6e0d6; }
   .item .meta { min-width: 0; color: var(--muted); font-size: 13px; font-weight: 650; }
+  .item .item-title { display: block; margin-bottom: 7px; color: var(--ink); font-size: 15px; }
+  .item .item-category { display: inline-block; margin-top: 7px; padding: 4px 8px; border-radius: 999px;
+    background: #f0ece4; color: #625e57; font-size: 10px; }
   .voice-state { display: inline-flex; align-items: center; gap: 7px; }
   .voice-state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #c8c2b8; }
   .voice-state.has-voice { color: var(--success); }
@@ -152,6 +170,7 @@
   .item .controls .voice-remove { color: var(--muted); }
   .item .controls .photo-remove { color: var(--danger); background: rgba(183,75,67,.06); }
   .item .controls .voice-play { color: #4c4a88; background: #f0efff; }
+  .item .controls .speech-edit { color: #35657b; background: #eaf5f7; }
   .list-empty { padding: 30px 20px; border: 1px dashed rgba(29,27,24,.16); border-radius: 20px;
     color: var(--muted); text-align: center; white-space: pre-line; font-size: 13px; line-height: 1.65; }
 
@@ -215,6 +234,28 @@
   #voiceSave { border-color: transparent; background: #716bb4; color: #fff; }
   #voiceCancel { grid-column: 1/-1; min-height: 42px; border: 0; background: transparent; color: var(--muted); box-shadow: none; }
 
+  /* 文字から読み上げる声 */
+  #speechSheet { position: fixed; inset: 0; z-index: 46; display: none; align-items: flex-end;
+    background: rgba(29,27,24,.4); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
+  #speechSheet.on { display: flex; }
+  .speech-panel { width: min(100%,560px); max-height: 94dvh; overflow: auto; margin: 0 auto;
+    padding: 12px 18px calc(22px + env(safe-area-inset-bottom,0px)); border-radius: 28px 28px 0 0;
+    background: var(--surface); box-shadow: 0 -18px 50px rgba(29,27,24,.2); animation: sheet-in .28s cubic-bezier(.2,.8,.2,1) both; }
+  .field-label { display: block; margin: 16px 0 7px; color: var(--muted); font-size: 12px; font-weight: 750; }
+  #speechName,#speechText { width: 100%; padding: 13px; border: 1px solid var(--line); border-radius: 13px; font: inherit; background: #fff; color: var(--ink); }
+  #speechText { min-height: 84px; resize: vertical;
+    border-radius: 15px; background: #f8f5ef; color: var(--ink); font: 16px/1.55 inherit; -webkit-user-select: text; user-select: text; }
+  #speechCategory { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--line);
+    border-radius: 14px; background: #f8f5ef; color: var(--ink); font: 700 14px inherit; }
+  .speech-presets { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .speech-preset { min-height: 51px; padding: 8px; background: #f7f4ee; box-shadow: none; font-size: 13px; }
+  .speech-preset.selected { border-color: #4f94ad; background: #eaf5f7; color: #285a70; }
+  .speech-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 19px; }
+  #speechTry { background: #eaf5f7; color: #285a70; }
+  #speechSave { border-color: transparent; background: #357d99; color: #fff; }
+  #speechRemove,#speechCancel { min-height: 42px; border: 0; background: transparent; box-shadow: none; }
+  #speechRemove { color: var(--danger); } #speechCancel { color: var(--muted); }
+
   @keyframes card-in { from { opacity: 0; transform: translateY(7px) scale(.985); } }
   @keyframes parent-in { from { opacity: 0; transform: translateY(10px); } }
   @keyframes hold-ring { to { stroke-dashoffset: 0; } }
@@ -224,6 +265,7 @@
   @keyframes happy-pop { 45% { transform: scale(1.08) rotate(1deg); } }
   @keyframes sparkle { from { opacity: 1; transform: translate(0,0) scale(.4); }
     to { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(1.35); } }
+  @keyframes wrong-shake { 25% { transform: translateX(-7px) rotate(-1deg); } 55% { transform: translateX(7px) rotate(1deg); } }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
@@ -231,6 +273,13 @@
 </head>
 <body>
 <header id="hdr"></header>
+
+<div id="childTools" aria-label="あそびかた">
+  <select id="categorySelect" aria-label="しゃしんのしゅるい"></select>
+  <button id="quizMode" class="kid-mode" aria-label="どれかなクイズ">？</button>
+  <button id="slideMode" class="kid-mode" aria-label="じどうで見る">▶</button>
+</div>
+<div id="modeMessage" role="status" aria-live="polite"></div>
 
 <div id="grid"></div>
 <div id="empty" hidden>
@@ -334,6 +383,34 @@
   </div>
 </div>
 
-<script src="app.js?v=7"></script>
+<div id="speechSheet" role="dialog" aria-modal="true" aria-labelledby="speechTitle">
+  <div class="speech-panel">
+    <div class="sheet-handle"></div>
+    <div class="voice-heading"><p>文字から声をつくる</p><h2 id="speechTitle">なんてしゃべる？</h2></div>
+    <label class="field-label" for="speechName">写真の名前（クイズ用）</label>
+    <input id="speechName" maxlength="20" placeholder="例：りんご">
+    <label class="field-label" for="speechText">読み上げることば</label>
+    <textarea id="speechText" maxlength="80" placeholder="例：りんご、これは消防車だよ"></textarea>
+    <label class="field-label" for="speechCategory">グループ</label>
+    <select id="speechCategory"></select>
+    <p class="field-label">声のキャラクター</p>
+    <div class="speech-presets" id="speechPresets">
+      <button class="speech-preset" data-speech-preset="woman">👩 おんなの人風</button>
+      <button class="speech-preset" data-speech-preset="man">👨 おとこの人風</button>
+      <button class="speech-preset" data-speech-preset="baby">👶 あかちゃん風</button>
+      <button class="speech-preset" data-speech-preset="anime">✨ アニメ風</button>
+      <button class="speech-preset" data-speech-preset="robot">🤖 ロボット風</button>
+      <button class="speech-preset" data-speech-preset="monster">🦖 かいじゅう風</button>
+      <button class="speech-preset" data-speech-preset="slow">🐢 のんびり</button>
+      <button class="speech-preset" data-speech-preset="random">🎲 おまかせ</button>
+    </div>
+    <div class="speech-actions">
+      <button id="speechTry">▶ ためす</button><button id="speechSave">これにする</button>
+      <button id="speechRemove">文字の声を削除</button><button id="speechCancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=8"></script>
 </body>
 </html>
