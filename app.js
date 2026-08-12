@@ -4,7 +4,8 @@
 // 自然音声を作るときだけ、入力した文章を音声生成APIへ送信する。
 const DB_NAME = 'talking-album';
 const STORE = 'items';
-const MAX_ITEMS = 30;
+// 誤操作による大量投入を防ぐ安全上限。実際の保存可否は端末の空き容量も確認する。
+const MAX_ITEMS = 300;
 const MAX_IMAGE_EDGE = 1600;
 const RECORDING_LIMIT_MS = 10000;
 const NATURAL_SPEECH_ENDPOINT = 'https://talking-album-voice.ringhio324-lab.workers.dev';
@@ -57,7 +58,7 @@ const statusEl = document.getElementById('status');
 const listEl = document.getElementById('list');
 const parentCount = document.getElementById('parentCount');
 const childTools = document.getElementById('childTools');
-const categorySelect = document.getElementById('categorySelect');
+const bookShelf = document.getElementById('bookShelf');
 const quizModeButton = document.getElementById('quizMode');
 const slideModeButton = document.getElementById('slideMode');
 const modeMessage = document.getElementById('modeMessage');
@@ -73,6 +74,13 @@ const CATEGORIES = [
   ['all','ぜんぶ'], ['family','かぞく'], ['animal','どうぶつ'],
   ['food','たべもの'], ['vehicle','のりもの'], ['favorite','おきにいり'], ['other','そのほか'],
 ];
+const BOOKS = [
+  ['all', 'すべての ずかん'],
+  ['me', 'ぼく・わたし'],
+  ['creatures', 'いきもの'],
+  ['discoveries', 'みつけたもの'],
+  ['free', 'じゆう'],
+];
 const SPEECH_PRESETS = {
   woman: { rate: 1.02, pitch: 1.25, repeat: 1 }, man: { rate: .9, pitch: .78, repeat: 1 },
   baby: { rate: 1.2, pitch: 1.75, repeat: 2 }, anime: { rate: 1.12, pitch: 1.5, repeat: 1 },
@@ -84,7 +92,7 @@ const NATURAL_VOICES = {
   anime: 'ja-JP-ShioriNeural', robot: 'ja-JP-NaokiNeural', monster: 'ja-JP-DaichiNeural',
   slow: 'ja-JP-MayuNeural',
 };
-let selectedCategory = 'all';
+let selectedBook = 'all';
 let quizTargetId = null;
 let slideshowTimer = null;
 let slideshowIndex = 0;
@@ -98,6 +106,13 @@ function voiceOf(item) {
 }
 
 function hasSound(item) { return Boolean(item.audio || item.speech?.text); }
+
+function bookOf(item) {
+  if (BOOKS.some(([key]) => key === item.book && key !== 'all')) return item.book;
+  if (item.category === 'family') return 'me';
+  if (item.category === 'animal') return 'creatures';
+  return 'discoveries';
+}
 
 function showModeMessage(message, duration = 1700) {
   modeMessage.textContent = message;
@@ -118,11 +133,14 @@ async function renderGrid() {
   revokeAll(urls);
   const items = await db.all();
   grid.innerHTML = '';
-  const filtered = selectedCategory === 'all' ? items : items.filter(item => (item.category || 'other') === selectedCategory);
+  const filtered = selectedBook === 'all' ? items : items.filter(item => bookOf(item) === selectedBook);
   empty.hidden = items.length > 0;
   childTools.classList.toggle('on', items.length > 0);
-  categorySelect.innerHTML = CATEGORIES.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
-  categorySelect.value = selectedCategory;
+  bookShelf.classList.toggle('on', items.length > 0);
+  bookShelf.innerHTML = BOOKS.map(([value, label]) => {
+    const count = value === 'all' ? items.length : items.filter(item => bookOf(item) === value).length;
+    return `<button class="book-tab book-${value}${selectedBook === value ? ' selected' : ''}" data-book="${value}" aria-pressed="${selectedBook === value}"><span>${label}</span><b>${count}</b></button>`;
+  }).join('');
 
   for (const [index, item] of filtered.entries()) {
     const button = document.createElement('button');
@@ -151,8 +169,10 @@ async function renderGrid() {
   }
 }
 
-categorySelect.addEventListener('change', () => {
-  selectedCategory = categorySelect.value;
+bookShelf.addEventListener('click', event => {
+  const button = event.target.closest('[data-book]');
+  if (!button) return;
+  selectedBook = button.dataset.book;
   stopSlideshow();
   quizTargetId = null;
   quizModeButton.classList.remove('active');
@@ -160,7 +180,7 @@ categorySelect.addEventListener('change', () => {
 });
 
 function visibleItems(items) {
-  return selectedCategory === 'all' ? items : items.filter(item => (item.category || 'other') === selectedCategory);
+  return selectedBook === 'all' ? items : items.filter(item => bookOf(item) === selectedBook);
 }
 
 function speechSettings(speech) {
@@ -507,7 +527,12 @@ document.getElementById('pick').addEventListener('change', async event => {
   let added = 0;
   for (const file of selected) {
     try {
-      await db.add({ image: await prepareImage(file), audio: null, name: '', category: 'other', speech: null, soundMode: 'recording', voice: { ...DEFAULT_VOICE } });
+      await db.add({
+        image: await prepareImage(file), audio: null, name: '', category: 'other',
+        book: selectedBook === 'all' ? 'discoveries' : selectedBook,
+        discoveredAt: new Date().toISOString().slice(0, 10),
+        speech: null, soundMode: 'recording', voice: { ...DEFAULT_VOICE },
+      });
       added += 1;
     } catch (_) {
       setStatus('開けない写真がありました');
@@ -523,7 +548,8 @@ async function renderList() {
   revokeAll(listUrls);
   const items = await db.all();
   listEl.innerHTML = '';
-  parentCount.textContent = `${items.length} / ${MAX_ITEMS}枚`;
+  parentCount.textContent = `${items.length}枚`;
+  updateStorageUsage(items).catch(() => {});
 
   if (!items.length) {
     const emptyList = document.createElement('div');
@@ -559,6 +585,32 @@ async function renderList() {
       setStatus('写真の名前を保存しました');
     });
     nameLabel.appendChild(nameInput);
+    const bookLabelEl = document.createElement('label');
+    bookLabelEl.className = 'item-field';
+    bookLabelEl.innerHTML = '<span>入れる図鑑</span>';
+    const bookSelectEl = document.createElement('select');
+    bookSelectEl.className = 'item-category-select';
+    bookSelectEl.innerHTML = BOOKS.filter(([key]) => key !== 'all').map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+    bookSelectEl.value = bookOf(item);
+    bookSelectEl.addEventListener('change', async () => {
+      item.book = bookSelectEl.value;
+      await db.put(item);
+      setStatus('入れる図鑑を保存しました');
+    });
+    bookLabelEl.appendChild(bookSelectEl);
+    const dateLabelEl = document.createElement('label');
+    dateLabelEl.className = 'item-field';
+    dateLabelEl.innerHTML = '<span>見つけた日（任意）</span>';
+    const dateInput = document.createElement('input');
+    dateInput.className = 'item-date-input';
+    dateInput.type = 'date';
+    dateInput.value = item.discoveredAt || '';
+    dateInput.addEventListener('change', async () => {
+      item.discoveredAt = dateInput.value;
+      await db.put(item);
+      setStatus('見つけた日を保存しました');
+    });
+    dateLabelEl.appendChild(dateInput);
     const categoryLabelEl = document.createElement('label');
     categoryLabelEl.className = 'item-field';
     categoryLabelEl.innerHTML = '<span>グループ</span>';
@@ -572,7 +624,7 @@ async function renderList() {
       setStatus('グループを保存しました');
     });
     categoryLabelEl.appendChild(categorySelectEl);
-    fields.append(nameLabel, categoryLabelEl);
+    fields.append(nameLabel, bookLabelEl, categoryLabelEl, dateLabelEl);
     meta.appendChild(fields);
     const voiceState = document.createElement('span');
     voiceState.className = `voice-state${hasSound(item) ? ' has-voice' : ''}`;
@@ -1053,6 +1105,21 @@ async function dataUrlToBlob(value) {
   return (await fetch(value)).blob();
 }
 
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';
+  return `${(bytes / 1024 / 1024).toFixed(bytes >= 100 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+async function updateStorageUsage(items = null) {
+  const usageEl = document.getElementById('storageUsage');
+  if (!usageEl) return;
+  const records = items || await db.all();
+  const mediaBytes = records.reduce((total, item) => total + (item.image?.size || 0) + (item.audio?.size || 0) + (item.speech?.audio?.size || 0), 0);
+  const estimate = await navigator.storage?.estimate?.();
+  const quotaText = estimate?.quota ? `／利用可能な目安 ${formatBytes(estimate.quota)}` : '';
+  usageEl.textContent = `使用中 約${formatBytes(mediaBytes)}${quotaText}`;
+}
+
 document.getElementById('backup').addEventListener('click', async () => {
   const items = await db.all();
   if (!items.length) {
@@ -1067,13 +1134,15 @@ document.getElementById('backup').addEventListener('click', async () => {
       audio: item.audio ? await blobToDataUrl(item.audio) : null,
       name: item.name || '',
       category: item.category || 'other',
+      book: bookOf(item),
+      discoveredAt: item.discoveredAt || '',
       speech: item.speech || null,
       speechAudio: item.speech?.audio ? await blobToDataUrl(item.speech.audio) : null,
       soundMode: item.soundMode || (item.audio ? 'recording' : item.speech?.text ? 'speech' : ''),
       voice: voiceOf(item),
     });
   }
-  const payload = JSON.stringify({ app: 'talking-album', version: 3, createdAt: new Date().toISOString(), items: records });
+  const payload = JSON.stringify({ app: 'talking-album', version: 4, createdAt: new Date().toISOString(), items: records });
   const file = new File([payload], `zukan-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
 
   if (navigator.canShare?.({ files: [file] })) {
@@ -1103,7 +1172,7 @@ document.getElementById('restore').addEventListener('change', async event => {
   setStatus('バックアップを確認しています…');
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'talking-album' || ![1, 2, 3].includes(payload.version) || !Array.isArray(payload.items)) {
+    if (payload.app !== 'talking-album' || ![1, 2, 3, 4].includes(payload.version) || !Array.isArray(payload.items)) {
       throw new Error('このアプリのバックアップではありません');
     }
     if (payload.items.length > MAX_ITEMS) throw new Error(`写真は${MAX_ITEMS}枚までです`);
@@ -1114,6 +1183,8 @@ document.getElementById('restore').addEventListener('change', async event => {
         audio: item.audio ? await dataUrlToBlob(item.audio) : null,
         name: typeof item.name === 'string' ? item.name : '',
         category: CATEGORIES.some(([key]) => key === item.category) ? item.category : 'other',
+        book: BOOKS.some(([key]) => key === item.book && key !== 'all') ? item.book : undefined,
+        discoveredAt: typeof item.discoveredAt === 'string' ? item.discoveredAt : '',
         speech: item.speech?.text ? { text: String(item.speech.text).slice(0, 80), preset: SPEECH_PRESETS[item.speech.preset] ? item.speech.preset : 'woman', speed: Math.min(1.15, Math.max(.55, Number(item.speech.speed ?? .85))), audio: item.speechAudio ? await dataUrlToBlob(item.speechAudio) : null } : null,
         soundMode: item.soundMode === 'speech' ? 'speech' : 'recording',
         voice: item.voice && typeof item.voice === 'object' ? { ...DEFAULT_VOICE, ...item.voice } : { ...DEFAULT_VOICE },

@@ -91,13 +91,24 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; padding: 14px;
     padding-top: 14px;
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  #bookShelf { display: none; width: min(100%,540px); margin: 0 auto; padding: 5px 12px 9px; gap: 9px;
+    overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  #bookShelf::-webkit-scrollbar { display: none; }
+  #bookShelf.on { display: flex; }
+  .book-tab { flex: 0 0 auto; min-width: 106px; min-height: 67px; display: grid; align-content: center; justify-items: start;
+    gap: 3px; padding: 9px 12px; border: 3px solid rgba(255,255,255,.82); border-radius: 10px 18px 18px 10px;
+    background: #e5a36f; color: #513b2d; box-shadow: 0 5px 12px rgba(63,49,35,.14); text-align: left; }
+  .book-tab span { max-width: 105px; font: 400 13px/1.2 var(--storybook-type); white-space: nowrap; }
+  .book-tab b { font-size: 10px; opacity: .68; }
+  .book-tab.selected { transform: translateY(-2px) rotate(-1deg); border-color: #fff8df; box-shadow: 0 7px 0 rgba(99,68,45,.18), 0 12px 20px rgba(63,49,35,.18); }
+  .book-me { background: #edaa9c; } .book-creatures { background: #a9c49b; }
+  .book-discoveries { background: #e7c36f; } .book-free { background: #aeb8d9; }
+  .book-all { background: #e8dfce; }
   #childTools { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 8; display: none;
     width: min(calc(100% - 24px),516px); margin: 0 auto; padding: 8px; gap: 7px;
     border: 1px solid rgba(255,255,255,.8); border-radius: 20px; background: rgba(255,252,241,.78);
     box-shadow: 0 10px 30px rgba(72,62,42,.11); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
-  #childTools.on { display: grid; grid-template-columns: 1fr 70px 70px; }
-  #categorySelect { min-width: 0; min-height: 44px; border: 0; border-radius: 13px; padding: 0 10px;
-    background: #f3efe7; color: var(--ink); font: 700 13px inherit; }
+  #childTools.on { display: grid; grid-template-columns: 1fr 1fr; }
   .kid-mode { width: auto; min-height: 52px; padding: 5px; gap: 2px; flex-direction: column; border: 0;
     background: #edf4ed; color: #405f4b; box-shadow: none; font-size: 0; }
   .kid-mode svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -225,7 +236,8 @@
   .section-header { display: flex; align-items: baseline; justify-content: space-between;
     margin: 24px 2px 10px; }
   .section-header h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
-  #parentCount { color: var(--muted); font-size: 12px; }
+  .parent-metrics { display: grid; justify-items: end; gap: 2px; color: var(--muted); font-size: 12px; }
+  #storageUsage { max-width: 230px; font-size: 10px; line-height: 1.3; text-align: right; }
   #list { display: grid; gap: 12px; }
   .item { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 14px; align-items: start;
     padding: 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface);
@@ -235,10 +247,10 @@
   .item-fields { display: grid; gap: 9px; margin-bottom: 9px; }
   .item-field { display: grid; gap: 4px; }
   .item-field span { color: #706a61; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
-  .item-name-input, .item-category-select { width: 100%; min-width: 0; height: 39px; padding: 0 10px;
+  .item-name-input, .item-category-select, .item-date-input { width: 100%; min-width: 0; height: 39px; padding: 0 10px;
     border: 1px solid #ded8ce; border-radius: 11px; background: #fff; color: var(--ink); font: 700 14px inherit;
     -webkit-user-select: text; user-select: text; }
-  .item-name-input:focus, .item-category-select:focus { outline: 2px solid rgba(207,112,86,.24); border-color: #cf7056; }
+  .item-name-input:focus, .item-category-select:focus, .item-date-input:focus { outline: 2px solid rgba(207,112,86,.24); border-color: #cf7056; }
   .item .item-category { display: inline-block; margin-top: 7px; padding: 4px 8px; border-radius: 999px;
     background: #f0ece4; color: #625e57; font-size: 10px; }
   .voice-state { display: inline-flex; align-items: center; gap: 7px; }
@@ -396,8 +408,8 @@
   </div>
 </header>
 
+<div id="bookShelf" aria-label="ひらく図鑑"></div>
 <div id="childTools" aria-label="あそびかた">
-  <select id="categorySelect" aria-label="しゃしんのしゅるい"></select>
   <button id="quizMode" class="kid-mode" aria-label="どれかなクイズ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.6 9a2.7 2.7 0 1 1 4.4 2.1c-1.3.9-2 1.4-2 2.9"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="9"/></svg><span>どれかな</span></button>
   <button id="slideMode" class="kid-mode" aria-label="じどうで見る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5Z"/><circle cx="12" cy="12" r="9"/></svg><span>おまかせ</span></button>
 </div>
@@ -464,14 +476,14 @@
     </div>
     <div class="storage-guide" role="note" aria-label="保存についての注意">
       <strong>保存について</strong>
-      <p>写真は最大30枚です。写真・録音・作った声は、このブラウザの中に保存されます。</p>
+      <p>写真・録音・作った声は、このブラウザの中に保存されます。端末の空き容量に応じて最大300枚まで追加できます。</p>
       <p>Safariの履歴やWebサイトデータを消したとき、または端末の空き容量が少ないときは、データが消えることがあります。大切な内容は「バックアップ」で定期的に保存してください。</p>
     </div>
     <div id="status" role="status" aria-live="polite"></div>
 
     <div class="section-header">
       <h2>写真の名前と声</h2>
-      <span id="parentCount">0 / 30枚</span>
+      <span class="parent-metrics"><span id="parentCount">0枚</span><span id="storageUsage">使用量を確認中</span></span>
     </div>
     <div id="list"></div>
   </div>
@@ -555,6 +567,6 @@
   </div>
 </div>
 
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>
