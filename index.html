@@ -22,6 +22,7 @@
     --success: #47765a;
     --danger: #b74b43;
     --shadow: 0 12px 32px rgba(55, 47, 38, .10), 0 2px 7px rgba(55, 47, 38, .06);
+    --storybook-type: "Klee", "Klee One", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; min-height: 100%; background: var(--canvas); color: var(--ink);
@@ -40,8 +41,18 @@
   .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 15px 74px 8px 18px;
     display: flex; align-items: center; }
   .kid-brand-copy { min-width: 0; }
-  .kid-brand-copy b { display: block; color: #44362c; font-size: 21px; line-height: 1.1; letter-spacing: .03em; }
-  .kid-brand-copy span { display: block; margin-top: 4px; color: #98734d; font-size: 11px; font-weight: 800; }
+  .kid-brand-copy b { position: relative; display: inline-flex; align-items: baseline; color: #514133;
+    font: 800 23px/1.1 var(--storybook-type); letter-spacing: .045em;
+    text-shadow: .6px .5px 0 rgba(81,65,51,.2), -.4px .3px 0 rgba(81,65,51,.12); }
+  .kid-brand-copy b::after { content: ""; position: absolute; left: 1px; right: 0; bottom: -5px; height: 4px;
+    border-radius: 60% 35% 55% 30%; background: #d77c5c; opacity: .72; transform: rotate(-.7deg); }
+  .story-letter { display: inline-block; font-style: normal; transform-origin: 50% 80%; }
+  .story-letter:nth-child(5n+1) { transform: rotate(-2deg) translateY(1px); }
+  .story-letter:nth-child(5n+2) { transform: rotate(1.4deg) translateY(-1px); }
+  .story-letter:nth-child(5n+3) { transform: rotate(-.7deg); }
+  .story-letter:nth-child(5n+4) { transform: rotate(1.8deg) translateY(1px); }
+  .story-letter.space { width: .42em; }
+  .kid-brand-copy > span { display: block; margin-top: 8px; color: #8b6d4d; font: 700 11px/1.2 var(--storybook-type); letter-spacing: .05em; }
   #parentEntry { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 10px;
     z-index: 16; width: auto; height: 46px; min-height: 46px; padding: 0 3px 0 12px; border: 0; border-radius: 999px;
     background: rgba(255,253,249,.86); color: #625e57; box-shadow: 0 4px 15px rgba(55,47,38,.11);
@@ -101,7 +112,7 @@
   .card.playing img { animation: happy-pop .45s cubic-bezier(.2,.9,.2,1); }
   .card-name { position: absolute; left: 9px; right: 9px; bottom: 9px; z-index: 2; overflow: hidden;
     padding: 8px 11px; border: 2px solid rgba(255,255,255,.9); border-radius: 999px; background: rgba(255,255,255,.9);
-    color: #3e342d; font-size: 14px; font-weight: 900; line-height: 1; text-overflow: ellipsis; white-space: nowrap;
+    color: #4a3b31; font: 800 15px/1 var(--storybook-type); letter-spacing: .025em; text-overflow: ellipsis; white-space: nowrap;
     box-shadow: 0 3px 10px rgba(55,47,38,.12); backdrop-filter: blur(7px); }
   .sound-badge { position: absolute; top: 9px; right: 9px; z-index: 2; width: 36px; height: 36px;
     display: grid; place-items: center; border: 2px solid rgba(255,255,255,.85); border-radius: 50%; background: #d9795c; color: #fff;
@@ -119,7 +130,7 @@
   #big.on img { transform: scale(1); }
   #bigName { position: absolute; left: 50%; bottom: calc(54px + env(safe-area-inset-bottom,0px)); z-index: 2;
     max-width: calc(100% - 40px); padding: 12px 22px; border: 4px solid #fff; border-radius: 999px;
-    background: #ffd75e; color: #49381f; box-shadow: 0 7px 0 #dc9f31; font-size: 23px; font-weight: 950;
+    background: #f3d78c; color: #49381f; box-shadow: 0 7px 0 #cba95e; font: 800 25px/1.1 var(--storybook-type);
     transform: translateX(-50%) rotate(-1deg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #bigHint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom,0px)); color: rgba(255,255,255,.78); font-size: 11px; font-weight: 800; }
 
@@ -137,10 +148,11 @@
   .empty-book { position: relative; width: 43px; height: 34px; border-radius: 4px 4px 12px 12px; background: #e99a67; }
   .empty-book::before { content: ""; position: absolute; inset: 4px 5px 5px; border-radius: 2px 2px 9px 9px; background: #fff5dc; }
   .empty-book::after { content: ""; position: absolute; left: 21px; top: 5px; width: 2px; height: 25px; background: #d7b579; transform: rotate(-3deg); }
-  .empty-title { margin: 0 0 8px; font-size: 23px; font-weight: 900; letter-spacing: -.02em; }
+  .empty-title { margin: 0 0 10px; color: #4b3d32; font: 800 25px/1.25 var(--storybook-type);
+    letter-spacing: .02em; text-shadow: .6px .5px rgba(75,61,50,.18); transform: rotate(-.5deg); }
   .empty-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
   #emptyOpen { min-width: 210px; min-height: 58px; margin-top: 20px; border: 0; background: #cf7056; color: #fff;
-    border-radius: 18px; font-size: 16px; box-shadow: 0 9px 22px rgba(118,63,47,.22); }
+    border-radius: 18px; font: 800 17px/1 var(--storybook-type); letter-spacing: .04em; box-shadow: 0 9px 22px rgba(118,63,47,.22); }
 
   /* 親の編集画面 */
   #parent { position: fixed; inset: 0; z-index: 20; display: none; overflow: auto;
@@ -332,7 +344,7 @@
 <body>
 <header id="hdr">
   <div class="kid-brand" aria-label="わくわくずかん">
-    <span class="kid-brand-copy"><b>わくわく ずかん</b><span>しゃしんを タッチしてね！</span></span>
+    <span class="kid-brand-copy"><b aria-label="わくわく ずかん"><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter space"> </i><i class="story-letter">ず</i><i class="story-letter">か</i><i class="story-letter">ん</i></b><span>しゃしんを タッチしてね！</span></span>
   </div>
 </header>
 
@@ -481,6 +493,6 @@
   </div>
 </div>
 
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>

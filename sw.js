@@ -1,6 +1,6 @@
 // アプリ本体だけをキャッシュする。写真と音声はIndexedDBにあり、ここには載らない。
-const CACHE = 'talking-album-v16';
-const ASSETS = ['./', './index.html', './app.js?v=16', './manifest.webmanifest', './icon-180.png', './icon-512.png', './storybook-meadow-v1.jpg'];
+const CACHE = 'talking-album-v17';
+const ASSETS = ['./', './index.html', './app.js?v=17', './manifest.webmanifest', './icon-180.png', './icon-512.png', './storybook-meadow-v1.jpg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
