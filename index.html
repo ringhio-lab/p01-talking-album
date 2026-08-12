@@ -500,13 +500,16 @@
     <div class="voice-heading"><p>声のあそび</p><h2 id="voiceTitle">どんな声にする？</h2></div>
     <div class="preset-grid" id="voicePresets">
       <button class="preset" data-preset="normal">そのまま</button>
-      <button class="preset" data-preset="tiny">ちびっこ</button>
-      <button class="preset" data-preset="big">おおきな声</button>
-      <button class="preset" data-preset="slow">ゆっくり</button>
+      <button class="preset" data-preset="high">高くて速い</button>
+      <button class="preset" data-preset="low">低くてゆっくり</button>
+      <button class="preset" data-preset="loud">音量アップ</button>
+      <button class="preset" data-preset="radio">電話のような声</button>
+      <button class="preset" data-preset="echo">やまびこ</button>
     </div>
     <div class="voice-controls">
       <div class="range-row"><label for="voicePitch">声の高さ</label><input id="voicePitch" type="range" min="-6" max="6" step="1" value="0"><output id="voicePitchValue">ふつう</output></div>
       <div class="range-row"><label for="voiceRate">声の速さ</label><input id="voiceRate" type="range" min="0.7" max="1.35" step="0.05" value="1"><output id="voiceRateValue">ふつう</output></div>
+      <div class="range-row"><label for="voiceVolume">音量</label><input id="voiceVolume" type="range" min="0.6" max="1.8" step="0.1" value="1"><output id="voiceVolumeValue">ふつう</output></div>
     </div>
     <p class="pattern-label">何回しゃべる？</p>
     <div class="pattern-grid" id="voicePatterns">
@@ -552,6 +555,6 @@
   </div>
 </div>
 
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>

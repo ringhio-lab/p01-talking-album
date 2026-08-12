@@ -68,7 +68,7 @@ let activePlaybackButton = null;
 let activeAudioUrl = null;
 let audioContext = null;
 let activeSources = [];
-const DEFAULT_VOICE = { rate: 1, pitch: 0, pattern: 'once', preset: 'normal' };
+const DEFAULT_VOICE = { rate: 1, pitch: 0, volume: 1, effect: 'clean', pattern: 'once', preset: 'normal' };
 const CATEGORIES = [
   ['all','ぜんぶ'], ['family','かぞく'], ['animal','どうぶつ'],
   ['food','たべもの'], ['vehicle','のりもの'], ['favorite','おきにいり'], ['other','そのほか'],
@@ -90,7 +90,11 @@ let slideshowTimer = null;
 let slideshowIndex = 0;
 
 function voiceOf(item) {
-  return { ...DEFAULT_VOICE, ...(item.voice || {}) };
+  const saved = { ...(item.voice || {}) };
+  if (saved.preset === 'tiny') Object.assign(saved, { ...VOICE_PRESETS.high, preset: 'high' });
+  if (saved.preset === 'big') Object.assign(saved, { ...VOICE_PRESETS.low, preset: 'low' });
+  if (saved.preset === 'slow') Object.assign(saved, { ...VOICE_PRESETS.low, preset: 'low' });
+  return { ...DEFAULT_VOICE, ...saved };
 }
 
 function hasSound(item) { return Boolean(item.audio || item.speech?.text); }
@@ -271,15 +275,43 @@ async function playVoice(blob, settings, onEnded) {
       source.buffer = buffer;
       source.playbackRate.value = voice.rate;
       source.detune.value = voice.pitch * 100;
-      source.connect(audioContext.destination);
-      source.start(startAt + index * (duration + .22));
+      const gain = audioContext.createGain();
+      gain.gain.value = Math.max(.1, Math.min(2, voice.volume));
+      let output = source;
+      if (voice.effect === 'radio') {
+        const highpass = audioContext.createBiquadFilter();
+        const lowpass = audioContext.createBiquadFilter();
+        highpass.type = 'highpass'; highpass.frequency.value = 650;
+        lowpass.type = 'lowpass'; lowpass.frequency.value = 3200;
+        source.connect(highpass); highpass.connect(lowpass); output = lowpass;
+      }
+      const compressor = audioContext.createDynamicsCompressor();
+      compressor.threshold.value = -20;
+      compressor.knee.value = 12;
+      compressor.ratio.value = voice.volume > 1.2 ? 6 : 3;
+      output.connect(compressor); compressor.connect(gain); gain.connect(audioContext.destination);
+      const scheduledAt = startAt + index * (duration + .22);
+      source.start(scheduledAt);
+      let echo = null;
+      if (voice.effect === 'echo') {
+        echo = audioContext.createBufferSource();
+        const echoGain = audioContext.createGain();
+        echo.buffer = buffer;
+        echo.playbackRate.value = voice.rate;
+        echo.detune.value = voice.pitch * 100;
+        echoGain.gain.value = .28 * Math.min(1.3, voice.volume);
+        echo.connect(echoGain); echoGain.connect(audioContext.destination);
+        echo.start(scheduledAt + .24);
+        activeSources.push(echo);
+      }
       activeSources.push(source);
-      if (index === repeatCount - 1) source.onended = onEnded;
+      if (index === repeatCount - 1) (echo || source).onended = onEnded;
     }
   } catch (_) {
     activeAudioUrl = URL.createObjectURL(blob);
     audio = new Audio(activeAudioUrl);
     audio.playbackRate = voice.rate;
+    audio.volume = Math.min(1, voice.volume);
     audio.preservesPitch = false;
     audio.play().catch(onEnded);
     audio.onended = onEnded;
@@ -640,8 +672,10 @@ function toggleItemPlayback(item, button) {
 const voiceSheet = document.getElementById('voiceSheet');
 const voicePitch = document.getElementById('voicePitch');
 const voiceRate = document.getElementById('voiceRate');
+const voiceVolume = document.getElementById('voiceVolume');
 const voicePitchValue = document.getElementById('voicePitchValue');
 const voiceRateValue = document.getElementById('voiceRateValue');
+const voiceVolumeValue = document.getElementById('voiceVolumeValue');
 const voiceTry = document.getElementById('voiceTry');
 const voiceSave = document.getElementById('voiceSave');
 const voiceCancel = document.getElementById('voiceCancel');
@@ -649,10 +683,12 @@ let voiceEditingItem = null;
 let voiceDraft = { ...DEFAULT_VOICE };
 
 const VOICE_PRESETS = {
-  normal: { rate: 1, pitch: 0, pattern: 'once' },
-  tiny: { rate: 1.18, pitch: 4, pattern: 'twice' },
-  big: { rate: .84, pitch: -4, pattern: 'once' },
-  slow: { rate: .72, pitch: 0, pattern: 'once' },
+  normal: { rate: 1, pitch: 0, volume: 1, effect: 'clean', pattern: 'once' },
+  high: { rate: 1.18, pitch: 4, volume: 1, effect: 'clean', pattern: 'once' },
+  low: { rate: .78, pitch: -4, volume: 1.05, effect: 'clean', pattern: 'once' },
+  loud: { rate: 1, pitch: 0, volume: 1.7, effect: 'clean', pattern: 'once' },
+  radio: { rate: 1.02, pitch: 0, volume: 1.15, effect: 'radio', pattern: 'once' },
+  echo: { rate: .95, pitch: 0, volume: 1, effect: 'echo', pattern: 'once' },
 };
 
 function pitchLabel(value) {
@@ -666,11 +702,21 @@ function rateLabel(value) {
   return number > 1 ? `はやめ ×${number.toFixed(2)}` : `ゆっくり ×${number.toFixed(2)}`;
 }
 
+function volumeLabel(value) {
+  const number = Number(value);
+  if (number >= 1.5) return 'かなり大きい';
+  if (number > 1.05) return '大きめ';
+  if (number < .95) return '小さめ';
+  return 'ふつう';
+}
+
 function renderVoiceControls() {
   voicePitch.value = voiceDraft.pitch;
   voiceRate.value = voiceDraft.rate;
+  voiceVolume.value = voiceDraft.volume ?? 1;
   voicePitchValue.textContent = pitchLabel(voiceDraft.pitch);
   voiceRateValue.textContent = rateLabel(voiceDraft.rate);
+  voiceVolumeValue.textContent = volumeLabel(voiceDraft.volume ?? 1);
   document.querySelectorAll('.preset').forEach(button => {
     button.classList.toggle('selected', button.dataset.preset === voiceDraft.preset);
   });
@@ -713,6 +759,12 @@ voicePitch.addEventListener('input', () => {
 
 voiceRate.addEventListener('input', () => {
   voiceDraft.rate = Number(voiceRate.value);
+  voiceDraft.preset = 'custom';
+  renderVoiceControls();
+});
+
+voiceVolume.addEventListener('input', () => {
+  voiceDraft.volume = Number(voiceVolume.value);
   voiceDraft.preset = 'custom';
   renderVoiceControls();
 });
