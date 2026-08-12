@@ -70,8 +70,8 @@ let audioContext = null;
 let activeSources = [];
 const DEFAULT_VOICE = { rate: 1, pitch: 0, pattern: 'once', preset: 'normal' };
 const CATEGORIES = [
-  ['all','🌈 ぜんぶ'], ['family','👨‍👩‍👦 かぞく'], ['animal','🐶 どうぶつ'],
-  ['food','🍎 たべもの'], ['vehicle','🚗 のりもの'], ['favorite','⭐ おきにいり'], ['other','🎈 そのほか'],
+  ['all','ぜんぶ'], ['family','かぞく'], ['animal','どうぶつ'],
+  ['food','たべもの'], ['vehicle','のりもの'], ['favorite','おきにいり'], ['other','そのほか'],
 ];
 const SPEECH_PRESETS = {
   woman: { rate: 1.02, pitch: 1.25, repeat: 1 }, man: { rate: .9, pitch: .78, repeat: 1 },
@@ -142,7 +142,7 @@ async function renderGrid() {
     if (hasSound(item)) {
       const sound = document.createElement('span');
       sound.className = 'sound-badge';
-      sound.textContent = '♪';
+      sound.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 10v4"/><path d="M8 8.5v7"/><path d="M11 6v12"/><path d="M14 9v6"/><path d="M17 7.5v9"/><path d="M20 10.5v3"/></svg>';
       sound.setAttribute('aria-hidden', 'true');
       button.appendChild(sound);
     }
@@ -312,12 +312,12 @@ function handleCardTap(item, card, src) {
   if (quizTargetId !== null && item.id !== quizTargetId) {
     card.classList.add('quiz-wrong');
     setTimeout(() => card.classList.remove('quiz-wrong'), 500);
-    showModeMessage('おしい！ もういちど 😊');
+    showModeMessage('おしい！ もういちど');
     return;
   }
   if (quizTargetId === item.id) {
     quizTargetId = null;
-    showModeMessage('せいかい！ 🎉');
+    showModeMessage('せいかい！');
     play(item, card, src);
     setTimeout(startQuizRound, 2200);
     return;

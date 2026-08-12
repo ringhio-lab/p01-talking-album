@@ -10,6 +10,7 @@
 # アイコンだけは例外（個人データではない）
 !icon-180.png
 !icon-512.png
+!storybook-meadow-v1.jpg
 
 .DS_Store
 node_modules/

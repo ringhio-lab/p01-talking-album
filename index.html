@@ -28,10 +28,9 @@
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
     overscroll-behavior: none; }
-  body { min-height: 100dvh; background:
-    radial-gradient(circle at 8% 12%, rgba(255,210,92,.32) 0 7%, transparent 7.5%),
-    radial-gradient(circle at 92% 32%, rgba(121,201,232,.26) 0 9%, transparent 9.5%),
-    linear-gradient(165deg, #fff9e9 0%, #fff5f1 48%, #eefaff 100%); }
+  body { min-height: 100dvh; background: #f7edcf url('./storybook-meadow-v1.jpg') center bottom / cover fixed no-repeat; }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+    background: linear-gradient(180deg, rgba(255,253,244,.5), rgba(255,249,226,.08) 48%, rgba(48,72,52,.08)); }
   button, label.btn { font: inherit; -webkit-appearance: none; appearance: none; touch-action: manipulation; }
   button:focus-visible, label.btn:focus-within { outline: 3px solid rgba(240, 100, 73, .28); outline-offset: 2px; }
 
@@ -40,9 +39,13 @@
     padding-top: env(safe-area-inset-top, 0px); overflow: hidden; }
   .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 13px 74px 8px 16px;
     display: flex; align-items: center; gap: 10px; }
-  .kid-brand-mark { width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto;
-    border-radius: 17px 19px 16px 20px; background: #ffd75e; box-shadow: 0 5px 0 #efae38, 0 9px 22px rgba(190,128,25,.18);
-    font-size: 28px; transform: rotate(-4deg); animation: mascot-bob 3.2s ease-in-out infinite; }
+  .kid-brand-mark { position: relative; width: 48px; height: 48px; display: block; flex: 0 0 auto;
+    border-radius: 50% 50% 46% 54%; background: #e99a67; box-shadow: 0 5px 14px rgba(87,64,40,.16);
+    transform: rotate(-3deg); }
+  .kid-brand-mark::before { content: ""; position: absolute; left: 10px; top: 12px; width: 28px; height: 22px;
+    border-radius: 3px 3px 12px 12px; background: #fff8e6; box-shadow: inset 0 -3px rgba(215,184,125,.18); }
+  .kid-brand-mark::after { content: ""; position: absolute; left: 23px; top: 13px; width: 2px; height: 18px;
+    border-radius: 2px; background: #d8b981; transform: rotate(-4deg); }
   .kid-brand-copy { min-width: 0; }
   .kid-brand-copy b { display: block; color: #44362c; font-size: 21px; line-height: 1.1; letter-spacing: .03em; }
   .kid-brand-copy span { display: block; margin-top: 4px; color: #98734d; font-size: 11px; font-weight: 800; }
@@ -69,36 +72,35 @@
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
   #childTools { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 8; display: none;
     width: min(calc(100% - 24px),516px); margin: 0 auto; padding: 8px; gap: 7px;
-    border: 2px solid rgba(255,255,255,.9); border-radius: 23px; background: rgba(255,255,255,.84);
-    box-shadow: 0 8px 0 rgba(103,76,42,.08), 0 10px 28px rgba(55,47,38,.09); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+    border: 1px solid rgba(255,255,255,.8); border-radius: 20px; background: rgba(255,252,241,.78);
+    box-shadow: 0 10px 30px rgba(72,62,42,.11); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
   #childTools.on { display: grid; grid-template-columns: 1fr 70px 70px; }
   #categorySelect { min-width: 0; min-height: 44px; border: 0; border-radius: 13px; padding: 0 10px;
     background: #f3efe7; color: var(--ink); font: 700 13px inherit; }
-  .kid-mode { width: auto; min-height: 52px; padding: 4px 5px; gap: 0; flex-direction: column; border: 0;
-    background: #eaf7ff; color: #35657b; box-shadow: inset 0 -3px rgba(53,101,123,.1); font-size: 21px; }
+  .kid-mode { width: auto; min-height: 52px; padding: 5px; gap: 2px; flex-direction: column; border: 0;
+    background: #edf4ed; color: #405f4b; box-shadow: none; font-size: 0; }
+  .kid-mode svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .kid-mode span { display: block; font-size: 9px; font-weight: 900; line-height: 1.1; }
-  #quizMode { background: #fff0ae; color: #7c5819; }
-  #slideMode { background: #e8dcff; color: #58468b; }
-  .kid-mode.active { background: #ff7664 !important; color: #fff !important; animation: active-wiggle .8s ease-in-out infinite alternate; }
+  #quizMode { background: #f6e8cd; color: #835d35; }
+  #slideMode { background: #dfecea; color: #426d68; }
+  .kid-mode.active { background: #d9795c !important; color: #fff !important; }
   #modeMessage { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom,0px)); z-index: 14;
     width: max-content; max-width: calc(100% - 28px); padding: 15px 20px; border: 4px solid #fff; border-radius: 24px; background: #ff6f61;
     color: white; font-size: 17px; font-weight: 900; text-align: center; box-shadow: 0 8px 0 #d84f45, 0 14px 30px rgba(89,46,34,.24); transform: translate(-50%,24px) scale(.92); opacity: 0;
     pointer-events: none; transition: .22s; }
   #modeMessage.on { transform: translate(-50%,0) scale(1); opacity: 1; }
   .card.quiz-wrong { animation: wrong-shake .35s ease; }
-  .card { position: relative; aspect-ratio: .94; overflow: hidden; padding: 0; border: 5px solid #fff;
-    border-radius: 28px 24px 30px 23px; background: #e4dfd6; box-shadow: 0 7px 0 var(--card-shadow,#eab341), 0 13px 26px rgba(55,47,38,.13); cursor: pointer;
+  .card { position: relative; aspect-ratio: .94; overflow: hidden; padding: 0; border: 7px solid #fffaf0;
+    border-radius: 27px; background: #e4dfd6; box-shadow: 0 12px 30px rgba(64,55,38,.16), 0 2px 5px rgba(64,55,38,.08); cursor: pointer;
     animation: card-in .42s cubic-bezier(.2,.8,.2,1) both;
     animation-delay: calc(var(--index, 0) * 35ms); transform-origin: center; }
   .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.36); pointer-events: none; }
   .card img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none;
     transition: transform .35s cubic-bezier(.2,.8,.2,1); }
-  .card:nth-child(4n+1) { --card-shadow:#efb735; }
-  .card:nth-child(4n+2) { --card-shadow:#68b8d8; }
-  .card:nth-child(4n+3) { --card-shadow:#ef8175; }
-  .card:nth-child(4n) { --card-shadow:#83bf82; }
-  .card:active { transform: translateY(5px) scale(.98); box-shadow: 0 2px 0 var(--card-shadow), 0 7px 14px rgba(55,47,38,.12); transition: .1s ease; }
+  .card:nth-child(3n+1) { transform: rotate(-.5deg); }
+  .card:nth-child(3n+2) { transform: rotate(.45deg); }
+  .card:active { transform: translateY(2px) scale(.975); box-shadow: 0 5px 14px rgba(55,47,38,.13); transition: .1s ease; }
   .card:active img { transform: scale(1.035); }
   .card.playing { box-shadow: 0 0 0 5px var(--canvas), 0 0 0 9px var(--accent), var(--shadow); }
   .card.playing img { animation: happy-pop .45s cubic-bezier(.2,.9,.2,1); }
@@ -106,9 +108,10 @@
     padding: 8px 11px; border: 2px solid rgba(255,255,255,.9); border-radius: 999px; background: rgba(255,255,255,.9);
     color: #3e342d; font-size: 14px; font-weight: 900; line-height: 1; text-overflow: ellipsis; white-space: nowrap;
     box-shadow: 0 3px 10px rgba(55,47,38,.12); backdrop-filter: blur(7px); }
-  .sound-badge { position: absolute; top: 8px; right: 8px; z-index: 2; width: 38px; height: 38px;
-    display: grid; place-items: center; border: 3px solid #fff; border-radius: 50%; background: #ff6f61; color: #fff;
-    box-shadow: 0 4px 0 #d84f45; font-size: 17px; }
+  .sound-badge { position: absolute; top: 9px; right: 9px; z-index: 2; width: 36px; height: 36px;
+    display: grid; place-items: center; border: 2px solid rgba(255,255,255,.85); border-radius: 50%; background: #d9795c; color: #fff;
+    box-shadow: 0 4px 12px rgba(88,49,38,.2); }
+  .sound-badge svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .card .spark { position: absolute; z-index: 2; width: 11px; height: 11px; border-radius: 50%;
     background: var(--spark, #ffd45c); pointer-events: none; animation: sparkle .72s ease-out forwards; }
 
@@ -128,18 +131,21 @@
   #empty { position: fixed; inset: calc(62px + env(safe-area-inset-top,0px)) 22px 0; display: flex; align-items: center;
     justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; }
   #empty[hidden] { display: none; }
-  .empty-content { max-width: 310px; padding: 25px 18px 22px; border: 4px solid #fff; border-radius: 38px;
-    background: rgba(255,255,255,.72); box-shadow: 0 10px 0 rgba(112,82,48,.09), 0 20px 44px rgba(74,55,36,.1); }
+  .empty-content { max-width: 310px; padding: 30px 22px 24px; border: 1px solid rgba(255,255,255,.75); border-radius: 32px;
+    background: rgba(255,252,241,.78); box-shadow: 0 20px 55px rgba(74,55,36,.13); backdrop-filter: blur(16px); }
   .empty-visual { position: relative; width: 138px; height: 112px; margin: 0 auto 24px; }
   .empty-card { position: absolute; width: 76px; height: 76px; border-radius: 22px;
     box-shadow: 0 9px 22px rgba(55,47,38,.12); }
-  .empty-card.back { left: 4px; top: 16px; background: #dccfbb; transform: rotate(-10deg); }
+  .empty-card.back { left: 4px; top: 16px; background: #a8bea3; transform: rotate(-10deg); }
   .empty-card.front { right: 4px; top: 4px; display: grid; place-items: center;
-    background: #fff; color: var(--accent); font-size: 40px; transform: rotate(7deg); animation: mascot-bob 2.8s ease-in-out infinite; }
+    background: #fffaf0; color: var(--accent); transform: rotate(7deg); }
+  .empty-book { position: relative; width: 43px; height: 34px; border-radius: 4px 4px 12px 12px; background: #e99a67; }
+  .empty-book::before { content: ""; position: absolute; inset: 4px 5px 5px; border-radius: 2px 2px 9px 9px; background: #fff5dc; }
+  .empty-book::after { content: ""; position: absolute; left: 21px; top: 5px; width: 2px; height: 25px; background: #d7b579; transform: rotate(-3deg); }
   .empty-title { margin: 0 0 8px; font-size: 23px; font-weight: 900; letter-spacing: -.02em; }
   .empty-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
-  #emptyOpen { min-width: 210px; min-height: 62px; margin-top: 20px; border: 3px solid #fff; background: #ff6f61; color: #fff;
-    border-radius: 22px; font-size: 17px; box-shadow: 0 7px 0 #d84f45, 0 12px 24px rgba(137,64,49,.2); }
+  #emptyOpen { min-width: 210px; min-height: 58px; margin-top: 20px; border: 0; background: #cf7056; color: #fff;
+    border-radius: 18px; font-size: 16px; box-shadow: 0 9px 22px rgba(118,63,47,.22); }
 
   /* 親の編集画面 */
   #parent { position: fixed; inset: 0; z-index: 20; display: none; overflow: auto;
@@ -326,15 +332,15 @@
 <body>
 <header id="hdr">
   <div class="kid-brand" aria-label="わくわくずかん">
-    <span class="kid-brand-mark" aria-hidden="true">🐣</span>
+    <span class="kid-brand-mark" aria-hidden="true"></span>
     <span class="kid-brand-copy"><b>わくわく ずかん</b><span>しゃしんを タッチしてね！</span></span>
   </div>
 </header>
 
 <div id="childTools" aria-label="あそびかた">
   <select id="categorySelect" aria-label="しゃしんのしゅるい"></select>
-  <button id="quizMode" class="kid-mode" aria-label="どれかなクイズ">❓<span>どれかな</span></button>
-  <button id="slideMode" class="kid-mode" aria-label="じどうで見る">▶️<span>おまかせ</span></button>
+  <button id="quizMode" class="kid-mode" aria-label="どれかなクイズ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.6 9a2.7 2.7 0 1 1 4.4 2.1c-1.3.9-2 1.4-2 2.9"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="9"/></svg><span>どれかな</span></button>
+  <button id="slideMode" class="kid-mode" aria-label="じどうで見る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5Z"/><circle cx="12" cy="12" r="9"/></svg><span>おまかせ</span></button>
 </div>
 <div id="modeMessage" role="status" aria-live="polite"></div>
 
@@ -343,11 +349,11 @@
   <div class="empty-content">
     <div class="empty-visual" aria-hidden="true">
       <div class="empty-card back"></div>
-      <div class="empty-card front">🐣</div>
+      <div class="empty-card front"><span class="empty-book"></span></div>
     </div>
     <p class="empty-title">ずかんを つくろう！</p>
     <p class="empty-copy">すきな しゃしんと こえを<br>いれてみよう。</p>
-    <button id="emptyOpen">＋ しゃしんを いれる</button>
+    <button id="emptyOpen">しゃしんを いれる</button>
     <p class="empty-copy" style="margin-top:14px">次回からは右上の鍵を<br>1秒長押しすると編集できます。</p>
   </div>
 </div>
@@ -423,10 +429,10 @@
     <div class="sheet-handle"></div>
     <div class="voice-heading"><p>声のあそび</p><h2 id="voiceTitle">どんな声にする？</h2></div>
     <div class="preset-grid" id="voicePresets">
-      <button class="preset" data-preset="normal"><span>🙂</span>そのまま</button>
-      <button class="preset" data-preset="tiny"><span>🐣</span>ちびっこ</button>
-      <button class="preset" data-preset="big"><span>🐻</span>おおきな声</button>
-      <button class="preset" data-preset="slow"><span>🐢</span>ゆっくり</button>
+      <button class="preset" data-preset="normal">そのまま</button>
+      <button class="preset" data-preset="tiny">ちびっこ</button>
+      <button class="preset" data-preset="big">おおきな声</button>
+      <button class="preset" data-preset="slow">ゆっくり</button>
     </div>
     <div class="voice-controls">
       <div class="range-row"><label for="voicePitch">声の高さ</label><input id="voicePitch" type="range" min="-6" max="6" step="1" value="0"><output id="voicePitchValue">ふつう</output></div>
@@ -457,14 +463,14 @@
     <select id="speechCategory"></select>
     <p class="field-label">声のキャラクター</p>
     <div class="speech-presets" id="speechPresets">
-      <button class="speech-preset" data-speech-preset="woman">👩 おんなの人風</button>
-      <button class="speech-preset" data-speech-preset="man">👨 おとこの人風</button>
-      <button class="speech-preset" data-speech-preset="baby">👶 あかちゃん風</button>
-      <button class="speech-preset" data-speech-preset="anime">✨ アニメ風</button>
-      <button class="speech-preset" data-speech-preset="robot">🤖 ロボット風</button>
-      <button class="speech-preset" data-speech-preset="monster">🦖 かいじゅう風</button>
-      <button class="speech-preset" data-speech-preset="slow">🐢 のんびり</button>
-      <button class="speech-preset" data-speech-preset="random">🎲 おまかせ</button>
+      <button class="speech-preset" data-speech-preset="woman">おんなの人</button>
+      <button class="speech-preset" data-speech-preset="man">おとこの人</button>
+      <button class="speech-preset" data-speech-preset="baby">あかちゃん</button>
+      <button class="speech-preset" data-speech-preset="anime">アニメ</button>
+      <button class="speech-preset" data-speech-preset="robot">ロボット</button>
+      <button class="speech-preset" data-speech-preset="monster">かいじゅう</button>
+      <button class="speech-preset" data-speech-preset="slow">のんびり</button>
+      <button class="speech-preset" data-speech-preset="random">おまかせ</button>
     </div>
     <div class="speech-speed">
       <label for="speechSpeed"><span>読み上げる速さ</span><output id="speechSpeedValue">ふつう</output></label>
@@ -478,6 +484,6 @@
   </div>
 </div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>
