@@ -4,6 +4,8 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-08-12",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
   "vars": {"AZURE_SPEECH_REGION":"japaneast","ALLOWED_ORIGIN":"https://ringhio-lab.github.io"},
   "secrets": {"required":["AZURE_SPEECH_KEY"]},
   "observability": {"enabled":true,"head_sampling_rate":1}

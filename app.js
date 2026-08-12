@@ -1,11 +1,13 @@
 'use strict';
 
-// 写真と音声は端末のIndexedDBだけに置く。外部サーバーには送信しない。
+// 写真・録音・生成済み音声は端末のIndexedDBに保存する。
+// 自然音声を作るときだけ、入力した文章を音声生成APIへ送信する。
 const DB_NAME = 'talking-album';
 const STORE = 'items';
 const MAX_ITEMS = 30;
 const MAX_IMAGE_EDGE = 1600;
 const RECORDING_LIMIT_MS = 10000;
+const NATURAL_SPEECH_ENDPOINT = 'https://talking-album-voice.ringhio324-lab.workers.dev';
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -75,6 +77,11 @@ const SPEECH_PRESETS = {
   baby: { rate: 1.2, pitch: 1.75, repeat: 2 }, anime: { rate: 1.12, pitch: 1.5, repeat: 1 },
   robot: { rate: .78, pitch: .72, repeat: 2 }, monster: { rate: .68, pitch: .45, repeat: 1 },
   slow: { rate: .7, pitch: 1, repeat: 1 }, random: { rate: 1, pitch: 1, repeat: 1 },
+};
+const NATURAL_VOICES = {
+  woman: 'ja-JP-NanamiNeural', man: 'ja-JP-KeitaNeural', baby: 'ja-JP-AoiNeural',
+  anime: 'ja-JP-ShioriNeural', robot: 'ja-JP-NaokiNeural', monster: 'ja-JP-DaichiNeural',
+  slow: 'ja-JP-MayuNeural',
 };
 let selectedCategory = 'all';
 let quizTargetId = null;
@@ -173,9 +180,25 @@ function speakText(text, speech = {}, onEnded = () => {}) {
   next();
 }
 
+async function generateNaturalSpeech(text, preset, speed) {
+  let resolvedPreset = preset;
+  if (resolvedPreset === 'random') {
+    const choices = Object.keys(NATURAL_VOICES);
+    resolvedPreset = choices[Math.floor(Math.random() * choices.length)];
+  }
+  const response = await fetch(NATURAL_SPEECH_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice: NATURAL_VOICES[resolvedPreset] || NATURAL_VOICES.woman, speed }),
+  });
+  if (!response.ok) throw new Error('natural_voice_failed');
+  return response.blob();
+}
+
 function playItemSound(item, onEnded = () => {}) {
   if (item.soundMode === 'speech' && item.speech?.text) {
-    speakText(item.speech.text, item.speech, onEnded);
+    if (item.speech.audio) playVoice(item.speech.audio, DEFAULT_VOICE, onEnded).catch(onEnded);
+    else speakText(item.speech.text, item.speech, onEnded);
   } else if (item.audio) {
     playVoice(item.audio, voiceOf(item), onEnded);
   } else if (item.speech?.text) {
@@ -740,25 +763,51 @@ speechSpeed.addEventListener('input', () => {
   speechSpeedValue.textContent = speechSpeedLabel(speechSpeedDraft);
 });
 
-speechTry.addEventListener('click', () => {
+speechTry.addEventListener('click', async () => {
   const text = speechText.value.trim();
   if (!text) { setStatus('読み上げることばを入力してください'); return; }
   stopPlayback();
-  speakText(text, { preset: speechPreset, speed: speechSpeedDraft });
+  speechTry.disabled = true;
+  speechTry.textContent = '声をつくっています…';
+  setStatus('自然な声をつくっています…');
+  try {
+    const blob = await generateNaturalSpeech(text, speechPreset, speechSpeedDraft);
+    speechTry.disabled = false;
+    speechTry.dataset.idleLabel = '▶ ためす';
+    speechTry.textContent = '▶ ためす';
+    togglePlayback(blob, speechTry);
+    setStatus('自然な声を再生しています');
+  } catch (_) {
+    speechTry.disabled = false;
+    speechTry.textContent = '▶ ためす';
+    speakText(text, { preset: speechPreset, speed: speechSpeedDraft });
+    setStatus('通信できないため、iPhoneの声で再生しています');
+  }
 });
 
 speechSave.addEventListener('click', async () => {
   if (!speechEditingItem) return;
   const text = speechText.value.trim();
   if (!text) { setStatus('読み上げることばを入力してください'); speechText.focus(); return; }
+  speechSave.disabled = true;
+  speechSave.textContent = '声をつくっています…';
+  setStatus('自然な声をつくって端末に保存しています…');
+  let generatedAudio = null;
+  try {
+    generatedAudio = await generateNaturalSpeech(text, speechPreset, speechSpeedDraft);
+  } catch (_) {
+    setStatus('通信できないため、iPhoneの読み上げ音声として保存します');
+  }
   speechEditingItem.name = speechName.value.trim() || text.replace(/[、。！？!?]/g, '').slice(0, 20);
   speechEditingItem.category = speechCategory.value;
-  speechEditingItem.speech = { text, preset: speechPreset, speed: speechSpeedDraft };
+  speechEditingItem.speech = { text, preset: speechPreset, speed: speechSpeedDraft, audio: generatedAudio };
   speechEditingItem.soundMode = 'speech';
   await db.put(speechEditingItem);
+  speechSave.disabled = false;
+  speechSave.textContent = 'これにする';
   closeSpeechSheet();
   await renderList();
-  setStatus('文字の声を保存しました。子ども画面ですぐ使えます');
+  setStatus(generatedAudio ? '自然な声をこのiPhoneに保存しました' : '文字の声を保存しました');
 });
 
 speechRemove.addEventListener('click', async () => {
@@ -940,11 +989,12 @@ document.getElementById('backup').addEventListener('click', async () => {
       name: item.name || '',
       category: item.category || 'other',
       speech: item.speech || null,
+      speechAudio: item.speech?.audio ? await blobToDataUrl(item.speech.audio) : null,
       soundMode: item.soundMode || (item.audio ? 'recording' : item.speech?.text ? 'speech' : ''),
       voice: voiceOf(item),
     });
   }
-  const payload = JSON.stringify({ app: 'talking-album', version: 2, createdAt: new Date().toISOString(), items: records });
+  const payload = JSON.stringify({ app: 'talking-album', version: 3, createdAt: new Date().toISOString(), items: records });
   const file = new File([payload], `zukan-backup-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
 
   if (navigator.canShare?.({ files: [file] })) {
@@ -974,7 +1024,7 @@ document.getElementById('restore').addEventListener('change', async event => {
   setStatus('バックアップを確認しています…');
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'talking-album' || ![1, 2].includes(payload.version) || !Array.isArray(payload.items)) {
+    if (payload.app !== 'talking-album' || ![1, 2, 3].includes(payload.version) || !Array.isArray(payload.items)) {
       throw new Error('このアプリのバックアップではありません');
     }
     if (payload.items.length > MAX_ITEMS) throw new Error(`写真は${MAX_ITEMS}枚までです`);
@@ -985,7 +1035,7 @@ document.getElementById('restore').addEventListener('change', async event => {
         audio: item.audio ? await dataUrlToBlob(item.audio) : null,
         name: typeof item.name === 'string' ? item.name : '',
         category: CATEGORIES.some(([key]) => key === item.category) ? item.category : 'other',
-        speech: item.speech?.text ? { text: String(item.speech.text).slice(0, 80), preset: SPEECH_PRESETS[item.speech.preset] ? item.speech.preset : 'woman', speed: Math.min(1.15, Math.max(.55, Number(item.speech.speed ?? .85))) } : null,
+        speech: item.speech?.text ? { text: String(item.speech.text).slice(0, 80), preset: SPEECH_PRESETS[item.speech.preset] ? item.speech.preset : 'woman', speed: Math.min(1.15, Math.max(.55, Number(item.speech.speed ?? .85))), audio: item.speechAudio ? await dataUrlToBlob(item.speechAudio) : null } : null,
         soundMode: item.soundMode === 'speech' ? 'speech' : 'recording',
         voice: item.voice && typeof item.voice === 'object' ? { ...DEFAULT_VOICE, ...item.voice } : { ...DEFAULT_VOICE },
       });
