@@ -51,6 +51,7 @@ const grid = document.getElementById('grid');
 const empty = document.getElementById('empty');
 const big = document.getElementById('big');
 const bigImg = document.getElementById('bigImg');
+const bigName = document.getElementById('bigName');
 const parent = document.getElementById('parent');
 const statusEl = document.getElementById('status');
 const listEl = document.getElementById('list');
@@ -132,6 +133,19 @@ async function renderGrid() {
     image.src = objectUrl(item.image);
     image.alt = '';
     button.appendChild(image);
+    if (item.name?.trim()) {
+      const name = document.createElement('span');
+      name.className = 'card-name';
+      name.textContent = item.name;
+      button.appendChild(name);
+    }
+    if (hasSound(item)) {
+      const sound = document.createElement('span');
+      sound.className = 'sound-badge';
+      sound.textContent = '♪';
+      sound.setAttribute('aria-hidden', 'true');
+      button.appendChild(sound);
+    }
     button.addEventListener('click', () => handleCardTap(item, button, image.src));
     grid.appendChild(button);
   }
@@ -230,7 +244,7 @@ function stopPlayback() {
 
 function celebrate(card) {
   const colors = ['#ffd45c', '#ff7d68', '#79c9e8', '#8ed59c', '#b09be8'];
-  for (let index = 0; index < 7; index += 1) {
+  for (let index = 0; index < 12; index += 1) {
     const spark = document.createElement('i');
     spark.className = 'spark';
     const angle = (Math.PI * 2 * index) / 7;
@@ -280,6 +294,8 @@ function play(item, card, src) {
   // iOSの音声制限を満たすため、ユーザーのタップ内でplay()する。
   stopPlayback();
   bigImg.src = src;
+  bigName.textContent = item.name || 'なにかな？';
+  bigName.hidden = false;
   big.classList.add('on');
   card.classList.add('playing');
   celebrate(card);

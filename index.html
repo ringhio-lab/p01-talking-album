@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#f4f1ea">
+<meta name="theme-color" content="#fff4d9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="ずかん">
@@ -12,7 +12,7 @@
 <title>ずかん</title>
 <style>
   :root {
-    --canvas: #f4f1ea;
+    --canvas: #fff8e9;
     --surface: #fffdf9;
     --ink: #1d1b18;
     --muted: #767169;
@@ -28,12 +28,24 @@
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
     overscroll-behavior: none; }
-  body { min-height: 100dvh; }
+  body { min-height: 100dvh; background:
+    radial-gradient(circle at 8% 12%, rgba(255,210,92,.32) 0 7%, transparent 7.5%),
+    radial-gradient(circle at 92% 32%, rgba(121,201,232,.26) 0 9%, transparent 9.5%),
+    linear-gradient(165deg, #fff9e9 0%, #fff5f1 48%, #eefaff 100%); }
   button, label.btn { font: inherit; -webkit-appearance: none; appearance: none; touch-action: manipulation; }
   button:focus-visible, label.btn:focus-within { outline: 3px solid rgba(240, 100, 73, .28); outline-offset: 2px; }
 
   /* 子どもの画面。上端だけが親モードの隠し入口。 */
-  header { height: env(safe-area-inset-top, 0px); }
+  header { position: relative; z-index: 2; height: calc(78px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px); overflow: hidden; }
+  .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 13px 74px 8px 16px;
+    display: flex; align-items: center; gap: 10px; }
+  .kid-brand-mark { width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto;
+    border-radius: 17px 19px 16px 20px; background: #ffd75e; box-shadow: 0 5px 0 #efae38, 0 9px 22px rgba(190,128,25,.18);
+    font-size: 28px; transform: rotate(-4deg); animation: mascot-bob 3.2s ease-in-out infinite; }
+  .kid-brand-copy { min-width: 0; }
+  .kid-brand-copy b { display: block; color: #44362c; font-size: 21px; line-height: 1.1; letter-spacing: .03em; }
+  .kid-brand-copy span { display: block; margin-top: 4px; color: #98734d; font-size: 11px; font-weight: 800; }
   #parentEntry { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 10px;
     z-index: 16; width: auto; height: 46px; min-height: 46px; padding: 0 3px 0 12px; border: 0; border-radius: 999px;
     background: rgba(255,253,249,.86); color: #625e57; box-shadow: 0 4px 15px rgba(55,47,38,.11);
@@ -52,61 +64,82 @@
   #parentEntry .lock { fill: none; stroke: currentColor; stroke-width: 1.9;
     stroke-linecap: round; stroke-linejoin: round; }
   #grid { width: min(100%, 540px); margin: 0 auto; display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px;
-    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; padding: 14px;
+    padding-top: 14px;
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
   #childTools { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 8; display: none;
-    width: min(calc(100% - 24px),516px); margin: 8px auto 0; padding: 7px; gap: 7px;
-    border: 1px solid rgba(29,27,24,.07); border-radius: 18px; background: rgba(255,253,249,.9);
-    box-shadow: 0 6px 20px rgba(55,47,38,.08); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
-  #childTools.on { display: grid; grid-template-columns: 1fr auto auto; }
+    width: min(calc(100% - 24px),516px); margin: 0 auto; padding: 8px; gap: 7px;
+    border: 2px solid rgba(255,255,255,.9); border-radius: 23px; background: rgba(255,255,255,.84);
+    box-shadow: 0 8px 0 rgba(103,76,42,.08), 0 10px 28px rgba(55,47,38,.09); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  #childTools.on { display: grid; grid-template-columns: 1fr 70px 70px; }
   #categorySelect { min-width: 0; min-height: 44px; border: 0; border-radius: 13px; padding: 0 10px;
     background: #f3efe7; color: var(--ink); font: 700 13px inherit; }
-  .kid-mode { width: 46px; min-height: 44px; padding: 0; border: 0; background: #f3efe7; box-shadow: none; font-size: 21px; }
-  .kid-mode.active { background: var(--ink); color: #fff; }
-  #modeMessage { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom,0px)); z-index: 14;
-    max-width: calc(100% - 30px); padding: 11px 16px; border-radius: 999px; background: rgba(29,27,24,.9);
-    color: white; font-size: 13px; font-weight: 750; transform: translate(-50%,18px); opacity: 0;
+  .kid-mode { width: auto; min-height: 52px; padding: 4px 5px; gap: 0; flex-direction: column; border: 0;
+    background: #eaf7ff; color: #35657b; box-shadow: inset 0 -3px rgba(53,101,123,.1); font-size: 21px; }
+  .kid-mode span { display: block; font-size: 9px; font-weight: 900; line-height: 1.1; }
+  #quizMode { background: #fff0ae; color: #7c5819; }
+  #slideMode { background: #e8dcff; color: #58468b; }
+  .kid-mode.active { background: #ff7664 !important; color: #fff !important; animation: active-wiggle .8s ease-in-out infinite alternate; }
+  #modeMessage { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom,0px)); z-index: 14;
+    width: max-content; max-width: calc(100% - 28px); padding: 15px 20px; border: 4px solid #fff; border-radius: 24px; background: #ff6f61;
+    color: white; font-size: 17px; font-weight: 900; text-align: center; box-shadow: 0 8px 0 #d84f45, 0 14px 30px rgba(89,46,34,.24); transform: translate(-50%,24px) scale(.92); opacity: 0;
     pointer-events: none; transition: .22s; }
-  #modeMessage.on { transform: translate(-50%,0); opacity: 1; }
+  #modeMessage.on { transform: translate(-50%,0) scale(1); opacity: 1; }
   .card.quiz-wrong { animation: wrong-shake .35s ease; }
-  .card { position: relative; aspect-ratio: 1; overflow: hidden; padding: 0; border: 0;
-    border-radius: 24px; background: #e4dfd6; box-shadow: var(--shadow); cursor: pointer;
+  .card { position: relative; aspect-ratio: .94; overflow: hidden; padding: 0; border: 5px solid #fff;
+    border-radius: 28px 24px 30px 23px; background: #e4dfd6; box-shadow: 0 7px 0 var(--card-shadow,#eab341), 0 13px 26px rgba(55,47,38,.13); cursor: pointer;
     animation: card-in .42s cubic-bezier(.2,.8,.2,1) both;
     animation-delay: calc(var(--index, 0) * 35ms); transform-origin: center; }
   .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.36); pointer-events: none; }
   .card img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none;
     transition: transform .35s cubic-bezier(.2,.8,.2,1); }
-  .card:active { transform: scale(.965); transition: transform .1s ease; }
+  .card:nth-child(4n+1) { --card-shadow:#efb735; }
+  .card:nth-child(4n+2) { --card-shadow:#68b8d8; }
+  .card:nth-child(4n+3) { --card-shadow:#ef8175; }
+  .card:nth-child(4n) { --card-shadow:#83bf82; }
+  .card:active { transform: translateY(5px) scale(.98); box-shadow: 0 2px 0 var(--card-shadow), 0 7px 14px rgba(55,47,38,.12); transition: .1s ease; }
   .card:active img { transform: scale(1.035); }
   .card.playing { box-shadow: 0 0 0 5px var(--canvas), 0 0 0 9px var(--accent), var(--shadow); }
   .card.playing img { animation: happy-pop .45s cubic-bezier(.2,.9,.2,1); }
+  .card-name { position: absolute; left: 9px; right: 9px; bottom: 9px; z-index: 2; overflow: hidden;
+    padding: 8px 11px; border: 2px solid rgba(255,255,255,.9); border-radius: 999px; background: rgba(255,255,255,.9);
+    color: #3e342d; font-size: 14px; font-weight: 900; line-height: 1; text-overflow: ellipsis; white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(55,47,38,.12); backdrop-filter: blur(7px); }
+  .sound-badge { position: absolute; top: 8px; right: 8px; z-index: 2; width: 38px; height: 38px;
+    display: grid; place-items: center; border: 3px solid #fff; border-radius: 50%; background: #ff6f61; color: #fff;
+    box-shadow: 0 4px 0 #d84f45; font-size: 17px; }
   .card .spark { position: absolute; z-index: 2; width: 11px; height: 11px; border-radius: 50%;
     background: var(--spark, #ffd45c); pointer-events: none; animation: sparkle .72s ease-out forwards; }
 
   #big { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
-    visibility: hidden; opacity: 0; background: radial-gradient(circle at 50% 38%, #303043, #111116 68%);
+    visibility: hidden; opacity: 0; background: radial-gradient(circle at 50% 38%, #544487, #24223b 68%);
     transition: opacity .2s ease, visibility .2s; }
   #big.on { visibility: visible; opacity: 1; }
   #big img { width: 100%; height: 100%; object-fit: contain; transform: scale(.985);
     transition: transform .24s cubic-bezier(.2,.8,.2,1); }
   #big.on img { transform: scale(1); }
+  #bigName { position: absolute; left: 50%; bottom: calc(54px + env(safe-area-inset-bottom,0px)); z-index: 2;
+    max-width: calc(100% - 40px); padding: 12px 22px; border: 4px solid #fff; border-radius: 999px;
+    background: #ffd75e; color: #49381f; box-shadow: 0 7px 0 #dc9f31; font-size: 23px; font-weight: 950;
+    transform: translateX(-50%) rotate(-1deg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bigHint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom,0px)); color: rgba(255,255,255,.78); font-size: 11px; font-weight: 800; }
 
-  #empty { position: fixed; inset: 48px 28px 0; display: flex; align-items: center;
+  #empty { position: fixed; inset: calc(62px + env(safe-area-inset-top,0px)) 22px 0; display: flex; align-items: center;
     justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; }
   #empty[hidden] { display: none; }
-  .empty-content { max-width: 280px; }
-  .empty-visual { position: relative; width: 112px; height: 98px; margin: 0 auto 28px; }
+  .empty-content { max-width: 310px; padding: 25px 18px 22px; border: 4px solid #fff; border-radius: 38px;
+    background: rgba(255,255,255,.72); box-shadow: 0 10px 0 rgba(112,82,48,.09), 0 20px 44px rgba(74,55,36,.1); }
+  .empty-visual { position: relative; width: 138px; height: 112px; margin: 0 auto 24px; }
   .empty-card { position: absolute; width: 76px; height: 76px; border-radius: 22px;
     box-shadow: 0 9px 22px rgba(55,47,38,.12); }
   .empty-card.back { left: 4px; top: 16px; background: #dccfbb; transform: rotate(-10deg); }
   .empty-card.front { right: 4px; top: 4px; display: grid; place-items: center;
-    background: var(--surface); color: var(--accent); font-size: 34px; transform: rotate(7deg); }
-  .empty-title { margin: 0 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+    background: #fff; color: var(--accent); font-size: 40px; transform: rotate(7deg); animation: mascot-bob 2.8s ease-in-out infinite; }
+  .empty-title { margin: 0 0 8px; font-size: 23px; font-weight: 900; letter-spacing: -.02em; }
   .empty-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
-  #emptyOpen { min-width: 180px; margin-top: 20px; border: 0; background: var(--ink); color: #fff;
-    box-shadow: 0 8px 20px rgba(29,27,24,.16); }
+  #emptyOpen { min-width: 210px; min-height: 62px; margin-top: 20px; border: 3px solid #fff; background: #ff6f61; color: #fff;
+    border-radius: 22px; font-size: 17px; box-shadow: 0 7px 0 #d84f45, 0 12px 24px rgba(137,64,49,.2); }
 
   /* 親の編集画面 */
   #parent { position: fixed; inset: 0; z-index: 20; display: none; overflow: auto;
@@ -270,18 +303,33 @@
   @keyframes sparkle { from { opacity: 1; transform: translate(0,0) scale(.4); }
     to { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(1.35); } }
   @keyframes wrong-shake { 25% { transform: translateX(-7px) rotate(-1deg); } 55% { transform: translateX(7px) rotate(1deg); } }
+  @keyframes mascot-bob { 50% { transform: translateY(-5px) rotate(4deg); } }
+  @keyframes active-wiggle { to { transform: rotate(3deg) scale(1.03); } }
+  @media (max-width: 380px) {
+    .kid-brand { padding-left: 11px; gap: 8px; }
+    .kid-brand-mark { width: 43px; height: 43px; font-size: 24px; }
+    .kid-brand-copy b { font-size: 17px; }
+    .kid-brand-copy span { display: none; }
+    #grid { gap: 11px; padding: 11px; }
+    .card-name { font-size: 12px; }
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 </style>
 </head>
 <body>
-<header id="hdr"></header>
+<header id="hdr">
+  <div class="kid-brand" aria-label="わくわくずかん">
+    <span class="kid-brand-mark" aria-hidden="true">🐣</span>
+    <span class="kid-brand-copy"><b>わくわく ずかん</b><span>しゃしんを タッチしてね！</span></span>
+  </div>
+</header>
 
 <div id="childTools" aria-label="あそびかた">
   <select id="categorySelect" aria-label="しゃしんのしゅるい"></select>
-  <button id="quizMode" class="kid-mode" aria-label="どれかなクイズ">？</button>
-  <button id="slideMode" class="kid-mode" aria-label="じどうで見る">▶</button>
+  <button id="quizMode" class="kid-mode" aria-label="どれかなクイズ">❓<span>どれかな</span></button>
+  <button id="slideMode" class="kid-mode" aria-label="じどうで見る">▶️<span>おまかせ</span></button>
 </div>
 <div id="modeMessage" role="status" aria-live="polite"></div>
 
@@ -290,11 +338,11 @@
   <div class="empty-content">
     <div class="empty-visual" aria-hidden="true">
       <div class="empty-card back"></div>
-      <div class="empty-card front">♪</div>
+      <div class="empty-card front">🐣</div>
     </div>
-    <p class="empty-title">最初の1枚を追加</p>
-    <p class="empty-copy">写真と声を登録して<br>家族だけのずかんを作りましょう。</p>
-    <button id="emptyOpen">写真を追加</button>
+    <p class="empty-title">ずかんを つくろう！</p>
+    <p class="empty-copy">すきな しゃしんと こえを<br>いれてみよう。</p>
+    <button id="emptyOpen">＋ しゃしんを いれる</button>
     <p class="empty-copy" style="margin-top:14px">次回からは右上の鍵を<br>1秒長押しすると編集できます。</p>
   </div>
 </div>
@@ -307,7 +355,7 @@
   </svg>
 </button>
 
-<div id="big"><img id="bigImg" alt=""></div>
+<div id="big"><img id="bigImg" alt=""><div id="bigName" hidden></div><div id="bigHint">タッチで もどる</div></div>
 
 <div id="parent">
   <div class="parent-shell">
@@ -331,7 +379,7 @@
 
     <div class="privacy-note">
       <span class="privacy-mark">✓</span>
-      <span>写真と声はこのスマホの中だけに保存されます。外部へ自動送信されることはありません。</span>
+      <span>写真・録音・作った声はこのスマホに保存されます。自然音声を作るときだけ、入力した文章を音声サービスへ送ります。</span>
     </div>
     <div id="status" role="status" aria-live="polite"></div>
 
@@ -420,6 +468,6 @@
   </div>
 </div>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
