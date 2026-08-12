@@ -11,9 +11,9 @@
     </filter>
   </defs>
   <g stroke="#a64f3e" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#wax)">
-    <g transform="translate(2 3)"><path d="M25 18 C20 47 21 91 28 126"/><path d="M9 55 C25 52 38 49 51 48"/><path d="M28 78 C47 55 72 49 85 63 C99 79 84 103 61 109 C46 113 35 104 32 91"/></g>
+    <g transform="translate(2 3)"><path d="M25 18 C20 47 21 91 28 126"/><path d="M4 58 C20 54 36 50 52 49"/><path d="M28 78 C47 55 72 49 85 63 C99 79 84 103 61 109 C46 113 35 104 32 91"/></g>
     <g transform="translate(98 -1) rotate(3 45 72)"><path d="M78 17 C60 35 38 54 20 67 C18 72 42 84 58 99 C69 109 77 120 84 130"/></g>
-    <g transform="translate(194 6) rotate(-1.5 48 70) scale(.98 1.02)"><path d="M28 18 C23 47 23 91 31 125"/><path d="M10 59 C26 54 40 50 54 50"/><path d="M30 79 C48 55 73 50 86 64 C99 81 82 105 59 109 C45 112 36 104 34 91"/></g>
+    <g transform="translate(194 6) rotate(-1.5 48 70) scale(.98 1.02)"><path d="M28 18 C23 47 23 91 31 125"/><path d="M5 61 C22 56 39 51 55 51"/><path d="M30 79 C48 55 73 50 86 64 C99 81 82 105 59 109 C45 112 36 104 34 91"/></g>
     <g transform="translate(291 -3) rotate(5 47 72) scale(1.04 .96)"><path d="M79 20 C60 40 39 55 18 70 C34 82 60 101 82 129"/></g>
     <g transform="translate(391 5) rotate(-2 49 72)"><path d="M10 48 C34 44 69 46 90 43"/><path d="M59 22 C54 48 55 67 64 80 C73 98 58 122 30 119"/><path d="M48 73 C58 63 72 70 70 82 C68 94 51 96 47 84 C45 79 45 76 48 73"/><path d="M70 13 L78 25"/><path d="M84 10 L92 22"/></g>
     <g transform="translate(491 -2) rotate(3 48 72)"><path d="M12 59 C35 54 58 54 65 66 C72 82 61 112 43 124"/><path d="M49 25 C45 53 34 91 21 119"/><path d="M77 47 C89 60 94 80 93 103"/></g>
