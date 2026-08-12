@@ -131,7 +131,7 @@ async function renderGrid() {
     button.appendChild(image);
     if (item.name?.trim()) {
       const name = document.createElement('span');
-      name.className = 'card-name';
+      name.className = 'card-name crayon-render';
       name.textContent = item.name;
       button.appendChild(name);
     }
@@ -291,6 +291,7 @@ function play(item, card, src) {
   stopPlayback();
   bigImg.src = src;
   bigName.textContent = item.name || 'なにかな？';
+  bigName.classList.add('crayon-render');
   bigName.hidden = false;
   big.classList.add('on');
   card.classList.add('playing');

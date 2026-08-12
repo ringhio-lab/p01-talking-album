@@ -18,6 +18,15 @@
     font-weight: 400;
     font-style: normal;
   }
+  .crayon-render {
+    filter: url("#crayon-edge");
+    -webkit-text-stroke: .35px currentColor;
+    text-shadow:
+      .7px .2px 0 currentColor,
+      -.5px .4px 0 rgba(72,55,42,.58),
+      .15px -.65px 0 rgba(72,55,42,.38),
+      1.2px .8px 0 rgba(255,248,224,.2);
+  }
   :root {
     --canvas: #fff8e9;
     --surface: #fffdf9;
@@ -48,11 +57,12 @@
   .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 15px 74px 8px 18px;
     display: flex; align-items: center; }
   .kid-brand-copy { min-width: 0; }
-  .kid-brand-copy b { position: relative; display: inline-flex; align-items: baseline; color: #514133;
+  .kid-brand-copy b { position: relative; display: inline-flex; align-items: baseline; color: #67503e;
     font: 400 25px/1.08 var(--storybook-type); letter-spacing: .035em;
-    text-shadow: 1px 0 rgba(81,65,51,.22), -1px 0 rgba(81,65,51,.12), 0 1px rgba(81,65,51,.16); }
+    text-shadow: 1px 0 rgba(81,65,51,.35), -1px 0 rgba(81,65,51,.2), 0 1px rgba(81,65,51,.24); }
   .kid-brand-copy b::after { content: ""; position: absolute; left: 1px; right: 0; bottom: -5px; height: 4px;
-    border-radius: 60% 35% 55% 30%; background: #d77c5c; opacity: .72; transform: rotate(-.7deg); }
+    border-radius: 60% 35% 55% 30%; background: repeating-linear-gradient(93deg,#c9634d 0 5px,#df8062 5px 8px,#b95745 8px 10px);
+    opacity: .72; transform: rotate(-.7deg); filter: url("#crayon-line"); }
   .story-letter { display: inline-block; font-style: normal; transform-origin: 50% 80%; }
   .story-letter:nth-child(5n+1) { transform: rotate(-2deg) translateY(1px); }
   .story-letter:nth-child(5n+2) { transform: rotate(1.4deg) translateY(-1px); }
@@ -119,7 +129,7 @@
   .card.playing img { animation: happy-pop .45s cubic-bezier(.2,.9,.2,1); }
   .card-name { position: absolute; left: 9px; right: 9px; bottom: 9px; z-index: 2; overflow: hidden;
     padding: 8px 11px; border: 2px solid rgba(255,255,255,.9); border-radius: 999px; background: rgba(255,255,255,.9);
-    color: #4a3b31; font: 400 16px/1 var(--storybook-type); letter-spacing: .015em; text-overflow: ellipsis; white-space: nowrap;
+    color: #584335; font: 400 16px/1 var(--storybook-type); letter-spacing: .015em; text-overflow: ellipsis; white-space: nowrap;
     box-shadow: 0 3px 10px rgba(55,47,38,.12); backdrop-filter: blur(7px); }
   .sound-badge { position: absolute; top: 9px; right: 9px; z-index: 2; width: 36px; height: 36px;
     display: grid; place-items: center; border: 2px solid rgba(255,255,255,.85); border-radius: 50%; background: #d9795c; color: #fff;
@@ -155,7 +165,7 @@
   .empty-book { position: relative; width: 43px; height: 34px; border-radius: 4px 4px 12px 12px; background: #e99a67; }
   .empty-book::before { content: ""; position: absolute; inset: 4px 5px 5px; border-radius: 2px 2px 9px 9px; background: #fff5dc; }
   .empty-book::after { content: ""; position: absolute; left: 21px; top: 5px; width: 2px; height: 25px; background: #d7b579; transform: rotate(-3deg); }
-  .empty-title { margin: 0 -8px 10px; color: #4b3d32; font: 400 25px/1.25 var(--storybook-type);
+  .empty-title { margin: 0 -8px 10px; color: #684c39; font: 400 25px/1.25 var(--storybook-type);
     letter-spacing: .005em; white-space: nowrap; text-shadow: 1px 0 rgba(75,61,50,.14), -.5px .5px rgba(75,61,50,.16); transform: rotate(-.5deg); }
   .empty-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
   #emptyOpen { min-width: 210px; min-height: 58px; margin-top: 20px; border: 0; background: #cf7056; color: #fff;
@@ -349,9 +359,23 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <filter id="crayon-edge" x="-8%" y="-12%" width="116%" height="124%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035 0.13" numOctaves="2" seed="19" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.85" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="1" seed="7" result="grain"/>
+    <feComposite in="grain" in2="SourceAlpha" operator="in" result="grainIn"/>
+    <feColorMatrix in="grainIn" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 .16 0" result="softGrain"/>
+    <feBlend in="rough" in2="softGrain" mode="multiply"/>
+  </filter>
+  <filter id="crayon-line" x="-5%" y="-80%" width="110%" height="260%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.08 0.55" numOctaves="2" seed="11" result="lineNoise"/>
+    <feDisplacementMap in="SourceGraphic" in2="lineNoise" scale="1.8"/>
+  </filter>
+</svg>
 <header id="hdr">
   <div class="kid-brand" aria-label="わくわくずかん">
-    <span class="kid-brand-copy"><b aria-label="わくわく ずかん"><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter space"> </i><i class="story-letter">ず</i><i class="story-letter">か</i><i class="story-letter">ん</i></b><span>しゃしんを タッチしてね！</span></span>
+    <span class="kid-brand-copy"><b class="crayon-render" aria-label="わくわく ずかん"><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter space"> </i><i class="story-letter">ず</i><i class="story-letter">か</i><i class="story-letter">ん</i></b><span>しゃしんを タッチしてね！</span></span>
   </div>
 </header>
 
@@ -369,7 +393,7 @@
       <div class="empty-card back"></div>
       <div class="empty-card front"><span class="empty-book"></span></div>
     </div>
-    <p class="empty-title">ずかんを つくろう！</p>
+    <p class="empty-title crayon-render">ずかんを つくろう！</p>
     <p class="empty-copy">すきな しゃしんと こえを<br>いれてみよう。</p>
     <button id="emptyOpen">しゃしんを いれる</button>
     <p class="empty-copy" style="margin-top:14px">次回からは右上の鍵を<br>1秒長押しすると編集できます。</p>
@@ -500,6 +524,6 @@
   </div>
 </div>
 
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>
