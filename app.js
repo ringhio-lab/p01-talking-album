@@ -779,6 +779,14 @@ async function renderList() {
     speechEdit.addEventListener('click', () => openSpeechSheet(item));
     controls.appendChild(speechEdit);
 
+    if (hasSound(item)) {
+      const exportCard = document.createElement('button');
+      exportCard.textContent = '音声つきカードを保存';
+      exportCard.className = 'export-card';
+      exportCard.addEventListener('click', () => exportTalkingCard(item, exportCard));
+      controls.appendChild(exportCard);
+    }
+
     if (item.audio) {
       const removeVoice = document.createElement('button');
       removeVoice.textContent = '声だけ削除';
@@ -1302,6 +1310,69 @@ function blobToDataUrl(blob) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+
+function safeFileName(value) {
+  return (value || 'ずかんカード')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 40) || 'ずかんカード';
+}
+
+function activeItemAudio(item) {
+  if (item.soundMode === 'speech') return item.speech?.audio || null;
+  return item.audio || item.speech?.audio || null;
+}
+
+async function buildTalkingCardFile(item) {
+  const title = item.name?.trim() || 'ずかんカード';
+  const imageData = await blobToDataUrl(item.image);
+  const audioBlob = activeItemAudio(item);
+  const audioData = audioBlob ? await blobToDataUrl(audioBlob) : '';
+  const speechText = item.soundMode === 'speech' ? item.speech?.text || '' : '';
+  const cardData = JSON.stringify({ title, imageData, audioData, speechText }).replace(/</g, '\\u003c');
+  const html = `<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${title.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character])}</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;padding:24px;background:#f7f0df;color:#3f392f;font-family:"Hiragino Maru Gothic ProN","Yu Gothic",sans-serif}.card{width:min(100%,540px);padding:18px 18px 24px;border-radius:32px;background:#fffdf6;box-shadow:0 18px 55px rgba(75,57,34,.18);text-align:center}.photo{display:block;width:100%;max-height:65svh;object-fit:contain;border-radius:22px;background:#eee7d8}h1{margin:18px 8px 14px;font-size:clamp(25px,7vw,38px);line-height:1.3}.play{width:100%;min-height:68px;border:0;border-radius:999px;background:#ef715c;color:#fff;font:700 21px/1 sans-serif;box-shadow:0 6px 0 #c94f42;touch-action:manipulation}.play:active{transform:translateY(4px);box-shadow:0 2px 0 #c94f42}.hint{margin:14px 0 0;color:#756e62;font-size:14px}</style></head>
+<body><main class="card"><img class="photo" alt=""><h1></h1><button class="play" type="button">▶ おしゃべりを きく</button><p class="hint">ボタンを おしてね</p></main>
+<script>const card=${cardData};const image=document.querySelector('.photo');const heading=document.querySelector('h1');const button=document.querySelector('.play');image.src=card.imageData;image.alt=card.title;heading.textContent=card.title;let player=null;button.addEventListener('click',()=>{if(card.audioData){if(!player){player=new Audio(card.audioData);player.addEventListener('ended',()=>button.textContent='▶ もういちど きく')}if(!player.paused){player.pause();player.currentTime=0;button.textContent='▶ おしゃべりを きく';return}player.currentTime=0;player.play();button.textContent='■ とめる'}else if(card.speechText&&'speechSynthesis'in window){speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(card.speechText);utterance.lang='ja-JP';utterance.rate=.85;speechSynthesis.speak(utterance)}});<\/script></body></html>`;
+  return new File([html], `${safeFileName(title)}-おしゃべりカード.html`, { type: 'text/html' });
+}
+
+async function exportTalkingCard(item, button) {
+  const idleLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'カードを作っています…';
+  try {
+    const file = await buildTalkingCardFile(item);
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ title: item.name || '音声つきずかんカード', text: '音声つきずかんカード', files: [file] });
+        setStatus('音声つきカードを共有しました');
+        return;
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          setStatus('保存を中止しました');
+          return;
+        }
+      }
+    }
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatus('音声つきカードを保存しました');
+  } catch (_) {
+    setStatus('カードを作れませんでした。もう一度お試しください');
+  } finally {
+    button.disabled = false;
+    button.textContent = idleLabel;
+  }
 }
 
 async function dataUrlToBlob(value) {
