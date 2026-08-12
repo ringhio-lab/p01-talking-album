@@ -3,59 +3,230 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#1b1b1f">
+<meta name="theme-color" content="#f4f1ea">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="ずかん">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>ずかん</title>
 <style>
-  :root { --gap: 10px; --bg: #1b1b1f; --fg: #f4f4f5; }
+  :root {
+    --canvas: #f4f1ea;
+    --surface: #fffdf9;
+    --ink: #1d1b18;
+    --muted: #767169;
+    --line: rgba(29, 27, 24, .09);
+    --accent: #f06449;
+    --accent-pressed: #d95037;
+    --success: #47765a;
+    --danger: #b74b43;
+    --shadow: 0 12px 32px rgba(55, 47, 38, .10), 0 2px 7px rgba(55, 47, 38, .06);
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
-    /* 2歳児が誤操作しないよう選択・長押しメニューを止める */
+  html, body { margin: 0; min-height: 100%; background: var(--canvas); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
     overscroll-behavior: none; }
+  body { min-height: 100dvh; }
+  button, label.btn { font: inherit; -webkit-appearance: none; appearance: none; touch-action: manipulation; }
+  button:focus-visible, label.btn:focus-within { outline: 3px solid rgba(240, 100, 73, .28); outline-offset: 2px; }
 
-  /* ヘッダーは長押しで親モードに入る隠し入口。見えるボタンは子供が押すので置かない */
+  /* 子どもの画面。上端だけが親モードの隠し入口。 */
   header { height: env(safe-area-inset-top, 0px); }
+  #parentEntry { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 10px;
+    z-index: 16; width: auto; height: 46px; min-height: 46px; padding: 0 3px 0 12px; border: 0; border-radius: 999px;
+    background: rgba(255,253,249,.86); color: #625e57; box-shadow: 0 4px 15px rgba(55,47,38,.11);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+  #parentEntry .parent-hint { display: block; max-width: 92px; overflow: hidden; white-space: nowrap;
+    color: #57524b; font-size: 10px; font-weight: 750; line-height: 1.25; letter-spacing: .01em;
+    transition: max-width .25s, opacity .2s, margin .2s; }
+  #parentEntry .parent-hint b { display: block; color: var(--accent); font-size: 11px; }
+  #parentEntry.hint-seen { width: 46px; padding: 0; }
+  #parentEntry.hint-seen .parent-hint { max-width: 0; opacity: 0; margin: 0; }
+  #parentEntry svg { width: 40px; height: 40px; display: block; }
+  #parentEntry .progress { fill: none; stroke: var(--accent); stroke-width: 2.2;
+    stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transform: rotate(-90deg);
+    transform-origin: 20px 20px; }
+  #parentEntry.holding .progress { animation: hold-ring 1s linear forwards; }
+  #parentEntry .lock { fill: none; stroke: currentColor; stroke-width: 1.9;
+    stroke-linecap: round; stroke-linejoin: round; }
+  #grid { width: min(100%, 540px); margin: 0 auto; display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  .card { position: relative; aspect-ratio: 1; overflow: hidden; padding: 0; border: 0;
+    border-radius: 24px; background: #e4dfd6; box-shadow: var(--shadow); cursor: pointer;
+    animation: card-in .42s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: calc(var(--index, 0) * 35ms); transform-origin: center; }
+  .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.36); pointer-events: none; }
+  .card img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none;
+    transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+  .card:active { transform: scale(.965); transition: transform .1s ease; }
+  .card:active img { transform: scale(1.035); }
+  .card.playing { box-shadow: 0 0 0 5px var(--canvas), 0 0 0 9px var(--accent), var(--shadow); }
+  .card.playing img { animation: happy-pop .45s cubic-bezier(.2,.9,.2,1); }
+  .card .spark { position: absolute; z-index: 2; width: 11px; height: 11px; border-radius: 50%;
+    background: var(--spark, #ffd45c); pointer-events: none; animation: sparkle .72s ease-out forwards; }
 
-  #grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap);
-    padding: var(--gap); padding-top: calc(var(--gap) + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(var(--gap) + env(safe-area-inset-bottom, 0px)); }
-  .card { position: relative; aspect-ratio: 1; border-radius: 18px; overflow: hidden;
-    background: #2a2a30; border: none; padding: 0; cursor: pointer; }
-  .card img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-  .card:active { transform: scale(.96); transition: transform .08s; }
-  .card.playing { outline: 4px solid #ffd166; outline-offset: -4px; }
+  #big { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+    visibility: hidden; opacity: 0; background: radial-gradient(circle at 50% 38%, #303043, #111116 68%);
+    transition: opacity .2s ease, visibility .2s; }
+  #big.on { visibility: visible; opacity: 1; }
+  #big img { width: 100%; height: 100%; object-fit: contain; transform: scale(.985);
+    transition: transform .24s cubic-bezier(.2,.8,.2,1); }
+  #big.on img { transform: scale(1); }
 
-  /* タップした写真を大きく出す。2歳児向けなので閉じるボタンは無く、どこでも触れば閉じる */
-  #big { position: fixed; inset: 0; background: #000; display: none;
-    align-items: center; justify-content: center; z-index: 10; }
-  #big.on { display: flex; }
-  #big img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #empty { position: fixed; inset: 48px 28px 0; display: flex; align-items: center;
+    justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; }
+  #empty[hidden] { display: none; }
+  .empty-content { max-width: 280px; }
+  .empty-visual { position: relative; width: 112px; height: 98px; margin: 0 auto 28px; }
+  .empty-card { position: absolute; width: 76px; height: 76px; border-radius: 22px;
+    box-shadow: 0 9px 22px rgba(55,47,38,.12); }
+  .empty-card.back { left: 4px; top: 16px; background: #dccfbb; transform: rotate(-10deg); }
+  .empty-card.front { right: 4px; top: 4px; display: grid; place-items: center;
+    background: var(--surface); color: var(--accent); font-size: 34px; transform: rotate(7deg); }
+  .empty-title { margin: 0 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+  .empty-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
+  #emptyOpen { min-width: 180px; margin-top: 20px; border: 0; background: var(--ink); color: #fff;
+    box-shadow: 0 8px 20px rgba(29,27,24,.16); }
 
-  #empty { padding: 24px; text-align: center; opacity: .75; line-height: 1.8; font-size: 15px; }
+  /* 親の編集画面 */
+  #parent { position: fixed; inset: 0; z-index: 20; display: none; overflow: auto;
+    background: var(--canvas); color: var(--ink); }
+  #parent.on { display: block; animation: parent-in .24s ease-out both; }
+  .parent-shell { width: min(100%, 560px); min-height: 100%; margin: 0 auto;
+    padding: env(safe-area-inset-top, 0px) 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+  .parent-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center;
+    justify-content: space-between; margin: 0 -16px 22px; padding: 14px 16px 12px;
+    background: rgba(244,241,234,.91); border-bottom: 1px solid transparent;
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+  .parent-heading { min-width: 0; }
+  .eyebrow { margin: 0 0 2px; color: var(--muted); font-size: 12px; font-weight: 650;
+    letter-spacing: .04em; }
+  #parent h1 { margin: 0; font-size: 24px; line-height: 1.18; letter-spacing: -.035em; }
+  #close { min-width: 66px; min-height: 44px; border: 0; border-radius: 999px;
+    background: var(--ink); color: #fff; font-size: 14px; font-weight: 700; }
+  #close:active { transform: scale(.96); }
 
-  /* 親モード */
-  #parent { position: fixed; inset: 0; background: #101014; z-index: 20; display: none;
-    flex-direction: column; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px
-      calc(16px + env(safe-area-inset-bottom, 0px)); overflow: auto; }
-  #parent.on { display: flex; }
-  #parent h1 { font-size: 17px; margin: 0 0 12px; font-weight: 600; }
-  #parent .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-  button, label.btn { font: inherit; font-size: 15px; padding: 11px 15px; border-radius: 11px;
-    border: 1px solid #3a3a44; background: #26262e; color: var(--fg); cursor: pointer; }
-  button.primary { background: #3d7dff; border-color: #3d7dff; }
-  button.rec { background: #e5484d; border-color: #e5484d; }
-  button:disabled { opacity: .4; }
-  #list { margin-top: 8px; }
-  .item { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #26262e; }
-  .item img { width: 54px; height: 54px; object-fit: cover; border-radius: 9px; }
-  .item .meta { flex: 1; min-width: 0; font-size: 13px; opacity: .8; }
-  .hint { font-size: 12px; opacity: .55; line-height: 1.7; }
+  .action-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+    margin-bottom: 14px; }
+  button, label.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 50px;
+    padding: 12px 14px; border: 1px solid var(--line); border-radius: 15px;
+    background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 700;
+    box-shadow: 0 2px 7px rgba(55,47,38,.04); cursor: pointer; }
+  .primary-action { grid-column: 1 / -1; min-height: 58px !important; border-color: transparent !important;
+    background: var(--accent) !important; color: #fff !important; font-size: 16px !important;
+    box-shadow: 0 9px 22px rgba(240,100,73,.24) !important; }
+  button:active, label.btn:active { transform: scale(.975); }
+  button:disabled { opacity: .38; box-shadow: none; }
+
+  .privacy-note { display: flex; gap: 11px; align-items: flex-start; margin: 0 0 16px; padding: 13px 14px;
+    border: 1px solid rgba(71,118,90,.14); border-radius: 16px; background: rgba(71,118,90,.07);
+    color: #385f48; font-size: 12px; line-height: 1.6; }
+  .privacy-mark { flex: 0 0 auto; width: 24px; height: 24px; display: grid; place-items: center;
+    border-radius: 50%; background: rgba(71,118,90,.13); font-size: 12px; font-weight: 800; }
+  #status { margin: 0 0 16px; padding: 11px 13px; border-radius: 13px; background: #fff4d9;
+    color: #785c1c; font-size: 13px; line-height: 1.5; }
+  #status:empty { display: none; }
+  .section-header { display: flex; align-items: baseline; justify-content: space-between;
+    margin: 24px 2px 10px; }
+  .section-header h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+  #parentCount { color: var(--muted); font-size: 12px; }
+  #list { display: grid; gap: 12px; }
+  .item { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: center;
+    padding: 12px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface);
+    box-shadow: 0 4px 14px rgba(55,47,38,.055); }
+  .item img { width: 72px; height: 72px; object-fit: cover; border-radius: 15px; background: #e6e0d6; }
+  .item .meta { min-width: 0; color: var(--muted); font-size: 13px; font-weight: 650; }
+  .voice-state { display: inline-flex; align-items: center; gap: 7px; }
+  .voice-state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #c8c2b8; }
+  .voice-state.has-voice { color: var(--success); }
+  .voice-state.has-voice::before { background: var(--success); box-shadow: 0 0 0 4px rgba(71,118,90,.1); }
+  .item .controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .item .controls button { min-width: 0; min-height: 44px; padding: 8px 5px; border-radius: 13px;
+    background: #f7f4ee; box-shadow: none; font-size: 13px; }
+  .item .controls .play-button.playing-audio { border-color: transparent; background: var(--ink); color: #fff; }
+  .item .controls .voice-remove { color: var(--muted); }
+  .item .controls .photo-remove { color: var(--danger); background: rgba(183,75,67,.06); }
+  .item .controls .voice-play { color: #4c4a88; background: #f0efff; }
+  .list-empty { padding: 30px 20px; border: 1px dashed rgba(29,27,24,.16); border-radius: 20px;
+    color: var(--muted); text-align: center; white-space: pre-line; font-size: 13px; line-height: 1.65; }
+
+  /* 録音は独立したシートで、開始・終了・確認・保存を明確に分ける。 */
+  #recordingSheet { position: fixed; inset: 0; z-index: 40; display: none; align-items: flex-end;
+    background: rgba(29,27,24,.38); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
+  #recordingSheet.on { display: flex; animation: sheet-backdrop-in .18s ease-out both; }
+  .recording-panel { width: min(100%, 560px); margin: 0 auto; padding: 12px 18px
+    calc(22px + env(safe-area-inset-bottom, 0px)); border-radius: 28px 28px 0 0;
+    background: var(--surface); box-shadow: 0 -18px 50px rgba(29,27,24,.2);
+    animation: sheet-in .28s cubic-bezier(.2,.8,.2,1) both; }
+  .sheet-handle { width: 38px; height: 5px; margin: 0 auto 24px; border-radius: 999px; background: #d8d2c9; }
+  .recording-label { margin: 0 0 4px; color: var(--accent); text-align: center; font-size: 13px;
+    font-weight: 750; letter-spacing: .04em; }
+  #recordingTitle { margin: 0; text-align: center; font-size: 24px; letter-spacing: -.035em; }
+  #recordingTimer { margin: 18px 0 12px; text-align: center; font-size: 48px; font-weight: 750;
+    font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+  .recording-pulse { width: 72px; height: 72px; margin: 4px auto 22px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 0 rgba(240,100,73,.35); }
+  #recordingSheet.recording .recording-pulse { animation: recording-pulse 1.35s ease-out infinite; }
+  #recordingSheet.review .recording-pulse { display: grid; place-items: center; background: rgba(71,118,90,.1);
+    color: var(--success); box-shadow: none; }
+  #recordingSheet.review .recording-pulse::after { content: "✓"; font-size: 28px; font-weight: 800; }
+  .recording-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .recording-actions button { min-height: 54px; }
+  #recordStop { grid-column: 1 / -1; border-color: transparent; background: var(--accent); color: #fff;
+    font-size: 16px; }
+  #recordSave { grid-column: 1 / -1; border-color: transparent; background: var(--success); color: #fff; }
+  #recordPreview.playing-audio { border-color: transparent; background: var(--ink); color: #fff; }
+  #recordCancel { grid-column: 1 / -1; min-height: 44px; border: 0; background: transparent;
+    color: var(--muted); box-shadow: none; }
+  #recordingSheet.recording .review-only { display: none; }
+  #recordingSheet.review #recordStop { display: none; }
+
+  /* 写真ごとの声のあそび設定 */
+  #voiceSheet { position: fixed; inset: 0; z-index: 45; display: none; align-items: flex-end;
+    background: rgba(29,27,24,.38); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px); }
+  #voiceSheet.on { display: flex; animation: sheet-backdrop-in .18s ease-out both; }
+  .voice-panel { width: min(100%, 560px); max-height: 92dvh; overflow: auto; margin: 0 auto;
+    padding: 12px 18px calc(22px + env(safe-area-inset-bottom, 0px)); border-radius: 28px 28px 0 0;
+    background: var(--surface); box-shadow: 0 -18px 50px rgba(29,27,24,.2);
+    animation: sheet-in .28s cubic-bezier(.2,.8,.2,1) both; }
+  .voice-heading { text-align: center; }
+  .voice-heading p { margin: 0 0 5px; color: #6661a4; font-size: 12px; font-weight: 750; letter-spacing: .05em; }
+  .voice-heading h2 { margin: 0 0 22px; font-size: 25px; letter-spacing: -.035em; }
+  .preset-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 9px; }
+  .preset { min-height: 58px; gap: 8px; background: #f6f3ed; box-shadow: none; }
+  .preset span { font-size: 22px; }
+  .preset.selected { border-color: #716bb4; background: #eeecff; color: #3e3a79; box-shadow: 0 0 0 2px rgba(113,107,180,.12); }
+  .voice-controls { display: grid; gap: 18px; margin: 20px 0; padding: 18px; border-radius: 20px; background: #f7f4ee; }
+  .range-row { display: grid; grid-template-columns: 72px 1fr 45px; gap: 10px; align-items: center; }
+  .range-row label { font-size: 13px; font-weight: 750; }
+  .range-row output { color: #4c4a88; text-align: right; font-size: 12px; font-weight: 750; }
+  input[type="range"] { width: 100%; accent-color: #716bb4; }
+  .pattern-label { margin: 0 0 9px; color: var(--muted); font-size: 12px; font-weight: 700; }
+  .pattern-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .pattern { min-height: 46px; padding: 8px; background: #f7f4ee; box-shadow: none; font-size: 13px; }
+  .pattern.selected { border-color: #716bb4; background: #eeecff; color: #3e3a79; }
+  .voice-sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 18px; }
+  #voiceTry { background: #eeecff; color: #3e3a79; }
+  #voiceSave { border-color: transparent; background: #716bb4; color: #fff; }
+  #voiceCancel { grid-column: 1/-1; min-height: 42px; border: 0; background: transparent; color: var(--muted); box-shadow: none; }
+
+  @keyframes card-in { from { opacity: 0; transform: translateY(7px) scale(.985); } }
+  @keyframes parent-in { from { opacity: 0; transform: translateY(10px); } }
+  @keyframes hold-ring { to { stroke-dashoffset: 0; } }
+  @keyframes sheet-in { from { transform: translateY(40px); opacity: .4; } }
+  @keyframes sheet-backdrop-in { from { background: rgba(29,27,24,0); } }
+  @keyframes recording-pulse { 70% { box-shadow: 0 0 0 22px rgba(240,100,73,0); } }
+  @keyframes happy-pop { 45% { transform: scale(1.08) rotate(1deg); } }
+  @keyframes sparkle { from { opacity: 1; transform: translate(0,0) scale(.4); }
+    to { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(1.35); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
 </style>
 </head>
 <body>
@@ -63,27 +234,106 @@
 
 <div id="grid"></div>
 <div id="empty" hidden>
-  写真がまだありません。<br>
-  <b>画面上部を1秒長押し</b>すると<br>おとうさん用の画面がひらきます。
+  <div class="empty-content">
+    <div class="empty-visual" aria-hidden="true">
+      <div class="empty-card back"></div>
+      <div class="empty-card front">♪</div>
+    </div>
+    <p class="empty-title">最初の1枚を追加</p>
+    <p class="empty-copy">写真と声を登録して<br>家族だけのずかんを作りましょう。</p>
+    <button id="emptyOpen">写真を追加</button>
+    <p class="empty-copy" style="margin-top:14px">次回からは右上の鍵を<br>1秒長押しすると編集できます。</p>
+  </div>
 </div>
+
+<button id="parentEntry" aria-label="大人用。1秒長押しして編集画面を開く">
+  <span class="parent-hint">おとなは<b>ここを長押し</b></span>
+  <svg viewBox="0 0 40 40" aria-hidden="true">
+    <circle class="progress" cx="20" cy="20" r="15.9"/>
+    <path class="lock" d="M16.5 19v-2.5a3.5 3.5 0 0 1 7 0V19m-8 0h9v8h-9z"/>
+  </svg>
+</button>
 
 <div id="big"><img id="bigImg" alt=""></div>
 
 <div id="parent">
-  <h1>おとうさん用</h1>
-  <div class="row">
-    <label class="btn">写真をえらぶ
-      <input id="pick" type="file" accept="image/*" multiple hidden>
-    </label>
-    <button id="close">とじる</button>
+  <div class="parent-shell">
+    <div class="parent-header">
+      <div class="parent-heading">
+        <p class="eyebrow">おとうさん用</p>
+        <h1>ずかんを編集</h1>
+      </div>
+      <button id="close">完了</button>
+    </div>
+
+    <div class="action-panel">
+      <label class="btn primary-action">写真を追加
+        <input id="pick" type="file" accept="image/*" multiple hidden>
+      </label>
+      <button id="backup">バックアップ</button>
+      <label class="btn">バックアップから復元
+        <input id="restore" type="file" accept="application/json,.json" hidden>
+      </label>
+    </div>
+
+    <div class="privacy-note">
+      <span class="privacy-mark">✓</span>
+      <span>写真と声はこのスマホの中だけに保存されます。外部へ自動送信されることはありません。</span>
+    </div>
+    <div id="status" role="status" aria-live="polite"></div>
+
+    <div class="section-header">
+      <h2>写真と声</h2>
+      <span id="parentCount">0 / 20枚</span>
+    </div>
+    <div id="list"></div>
   </div>
-  <p class="hint">
-    写真をえらぶと下に並びます。1枚ずつ「ろくおん」を押して名前を吹き込んでください。<br>
-    写真と声は<b>この端末の中だけ</b>に保存され、どこにも送信されません。
-  </p>
-  <div id="list"></div>
 </div>
 
-<script src="app.js"></script>
+<div id="recordingSheet" role="dialog" aria-modal="true" aria-labelledby="recordingTitle">
+  <div class="recording-panel">
+    <div class="sheet-handle"></div>
+    <p class="recording-label" id="recordingLabel">録音中</p>
+    <h2 id="recordingTitle">名前を話してください</h2>
+    <div id="recordingTimer">00:00</div>
+    <div class="recording-pulse" aria-hidden="true"></div>
+    <div class="recording-actions">
+      <button id="recordStop">■ 録音を終了</button>
+      <button id="recordPreview" class="review-only">▶ 声を聞く</button>
+      <button id="recordRetry" class="review-only">録り直す</button>
+      <button id="recordSave" class="review-only">この声を保存</button>
+      <button id="recordCancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<div id="voiceSheet" role="dialog" aria-modal="true" aria-labelledby="voiceTitle">
+  <div class="voice-panel">
+    <div class="sheet-handle"></div>
+    <div class="voice-heading"><p>声のあそび</p><h2 id="voiceTitle">どんな声にする？</h2></div>
+    <div class="preset-grid" id="voicePresets">
+      <button class="preset" data-preset="normal"><span>🙂</span>そのまま</button>
+      <button class="preset" data-preset="tiny"><span>🐣</span>ちびっこ</button>
+      <button class="preset" data-preset="big"><span>🐻</span>おおきな声</button>
+      <button class="preset" data-preset="slow"><span>🐢</span>ゆっくり</button>
+    </div>
+    <div class="voice-controls">
+      <div class="range-row"><label for="voicePitch">声の高さ</label><input id="voicePitch" type="range" min="-6" max="6" step="1" value="0"><output id="voicePitchValue">ふつう</output></div>
+      <div class="range-row"><label for="voiceRate">声の速さ</label><input id="voiceRate" type="range" min="0.7" max="1.35" step="0.05" value="1"><output id="voiceRateValue">ふつう</output></div>
+    </div>
+    <p class="pattern-label">何回しゃべる？</p>
+    <div class="pattern-grid" id="voicePatterns">
+      <button class="pattern" data-pattern="once">1回</button>
+      <button class="pattern" data-pattern="twice">2回</button>
+      <button class="pattern" data-pattern="three">3回</button>
+    </div>
+    <div class="voice-sheet-actions">
+      <button id="voiceTry">▶ ためす</button><button id="voiceSave">これにする</button>
+      <button id="voiceCancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=7"></script>
 </body>
 </html>
