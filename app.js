@@ -381,9 +381,9 @@ big.addEventListener('click', () => {
   stopPlayback();
 });
 
-// --- 親モードへの入口（右上の鍵を1秒長押し） ---
+// --- 保護者モードへの入口 ---
 const parentEntry = document.getElementById('parentEntry');
-let longPressTimer = null;
+const adultGate = document.getElementById('adultGate');
 
 try {
   if (localStorage.getItem('talking-album-parent-hint-seen') === '1') {
@@ -391,38 +391,19 @@ try {
   }
 } catch (_) { /* localStorageが使えなくても案内は表示する */ }
 
-function armLongPress(element) {
-  let startX = 0;
-  let startY = 0;
-  const start = event => {
-    event.preventDefault();
-    startX = event.clientX ?? 0;
-    startY = event.clientY ?? 0;
-    if (event.pointerId !== undefined) element.setPointerCapture?.(event.pointerId);
-    clearTimeout(longPressTimer);
-    element.classList.add('holding');
-    longPressTimer = setTimeout(() => {
-      element.classList.remove('holding');
-      openParent();
-    }, 1000);
-  };
-  const cancel = () => {
-    clearTimeout(longPressTimer);
-    element.classList.remove('holding');
-  };
-  const move = event => {
-    if (Math.hypot((event.clientX ?? startX) - startX, (event.clientY ?? startY) - startY) > 14) cancel();
-  };
-  element.addEventListener('pointerdown', start);
-  element.addEventListener('pointerup', cancel);
-  element.addEventListener('pointercancel', cancel);
-  element.addEventListener('lostpointercapture', cancel);
-  element.addEventListener('pointermove', move);
-  element.addEventListener('contextmenu', event => event.preventDefault());
-  element.addEventListener('dragstart', event => event.preventDefault());
-  element.addEventListener('click', event => event.preventDefault());
-}
-armLongPress(parentEntry);
+parentEntry.addEventListener('click', event => {
+  event.preventDefault();
+  adultGate.classList.add('on');
+});
+parentEntry.addEventListener('contextmenu', event => event.preventDefault());
+document.getElementById('adultGateOpen').addEventListener('click', () => {
+  adultGate.classList.remove('on');
+  openParent();
+});
+document.getElementById('adultGateCancel').addEventListener('click', () => adultGate.classList.remove('on'));
+adultGate.addEventListener('click', event => {
+  if (event.target === adultGate) adultGate.classList.remove('on');
+});
 
 function openParent() {
   parentEntry.classList.add('hint-seen');
