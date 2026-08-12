@@ -20,12 +20,13 @@
   }
   .crayon-render {
     filter: url("#crayon-edge");
-    -webkit-text-stroke: .35px currentColor;
+    -webkit-text-stroke: 1.15px currentColor;
+    paint-order: stroke fill;
     text-shadow:
-      .7px .2px 0 currentColor,
-      -.5px .4px 0 rgba(72,55,42,.58),
-      .15px -.65px 0 rgba(72,55,42,.38),
-      1.2px .8px 0 rgba(255,248,224,.2);
+      1px .25px 0 rgba(76,55,41,.78),
+      -1px .5px 0 rgba(76,55,41,.46),
+      .2px -1px 0 rgba(76,55,41,.42),
+      1.5px 1px 0 rgba(255,248,224,.18);
   }
   :root {
     --canvas: #fff8e9;
@@ -360,13 +361,22 @@
 </head>
 <body>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
-  <filter id="crayon-edge" x="-8%" y="-12%" width="116%" height="124%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.035 0.13" numOctaves="2" seed="19" result="noise"/>
-    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.85" xChannelSelector="R" yChannelSelector="G" result="rough"/>
-    <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="1" seed="7" result="grain"/>
-    <feComposite in="grain" in2="SourceAlpha" operator="in" result="grainIn"/>
-    <feColorMatrix in="grainIn" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 .16 0" result="softGrain"/>
-    <feBlend in="rough" in2="softGrain" mode="multiply"/>
+  <filter id="crayon-edge" x="-10%" y="-18%" width="120%" height="136%" color-interpolation-filters="sRGB">
+    <!-- 太い芯が紙へ押し付けられ、輪郭が少し潰れる -->
+    <feMorphology in="SourceGraphic" operator="dilate" radius="0.38" result="thickWax"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.028 0.115" numOctaves="2" seed="19" result="edgeNoise"/>
+    <feDisplacementMap in="thickWax" in2="edgeNoise" scale="1.15" xChannelSelector="R" yChannelSelector="G" result="roughWax"/>
+    <!-- 紙の目に色が入らず生まれる、小さく不規則な白抜け -->
+    <feTurbulence type="fractalNoise" baseFrequency="0.62 0.78" numOctaves="2" seed="37" result="paperNoise"/>
+    <feColorMatrix in="paperNoise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  .34 .33 .33 0 0" result="paperLuma"/>
+    <feComponentTransfer in="paperLuma" result="paperMask">
+      <feFuncA type="discrete" tableValues="0 1 1 1 1 1 1 1 1 1"/>
+    </feComponentTransfer>
+    <feComposite in="roughWax" in2="paperMask" operator="in" result="brokenWax"/>
+    <!-- 同じ場所を二度なぞったような、部分的な濃淡 -->
+    <feOffset in="roughWax" dx="0.42" dy="0.18" result="secondPass"/>
+    <feColorMatrix in="secondPass" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 .24 0" result="faintPass"/>
+    <feBlend in="brokenWax" in2="faintPass" mode="multiply"/>
   </filter>
   <filter id="crayon-line" x="-5%" y="-80%" width="110%" height="260%">
     <feTurbulence type="fractalNoise" baseFrequency="0.08 0.55" numOctaves="2" seed="11" result="lineNoise"/>
@@ -524,6 +534,6 @@
   </div>
 </div>
 
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
