@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 690 145" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 145" fill="none">
   <title>わくわくずかん</title>
   <defs>
     <filter id="wax" x="-5%" y="-14%" width="110%" height="128%" color-interpolation-filters="sRGB">
@@ -17,6 +17,6 @@
     <g transform="translate(291 -3) rotate(5 47 72) scale(1.04 .96)"><path d="M79 20 C60 40 39 55 18 70 C34 82 60 101 82 129"/></g>
     <g transform="translate(391 5) rotate(-2 49 72)"><path d="M10 48 C34 44 69 46 90 43"/><path d="M59 22 C54 48 55 67 64 80 C73 98 58 122 30 119"/><path d="M48 73 C58 63 72 70 70 82 C68 94 51 96 47 84 C45 79 45 76 48 73"/><path d="M70 13 L78 25"/><path d="M84 10 L92 22"/></g>
     <g transform="translate(491 -2) rotate(3 48 72)"><path d="M12 59 C35 54 58 54 65 66 C72 82 61 112 43 124"/><path d="M49 25 C45 53 34 91 21 119"/><path d="M77 47 C89 60 94 80 93 103"/></g>
-    <g transform="translate(540 5) rotate(-2 70 72) scale(.94 1.02)"><path d="M61 23 C48 47 34 76 20 112"/><path d="M33 96 C42 86 47 85 52 87 C64 91 56 111 72 112 C89 113 89 79 102 75 C116 71 109 106 124 114 C132 119 140 113 144 104"/></g>
+    <g transform="translate(572 5) rotate(-2 70 72) scale(.94 1.02)"><path d="M61 23 C48 47 34 76 20 112"/><path d="M33 96 C42 86 47 85 52 87 C64 91 56 111 72 112 C89 113 89 79 102 75 C116 71 109 106 124 114 C132 119 140 113 144 104"/></g>
   </g>
 </svg>
