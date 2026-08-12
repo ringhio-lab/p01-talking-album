@@ -7,7 +7,7 @@ const STORE = 'items';
 // 誤操作による大量投入を防ぐ安全上限。実際の保存可否は端末の空き容量も確認する。
 const MAX_ITEMS = 300;
 const MAX_IMAGE_EDGE = 1600;
-const RECORDING_LIMIT_MS = 10000;
+const RECORDING_LIMIT_MS = 30000;
 const NATURAL_SPEECH_ENDPOINT = 'https://talking-album-voice.ringhio324-lab.workers.dev';
 
 function openDb() {
@@ -577,10 +577,10 @@ async function requestPersistentStorage() {
   try { await navigator.storage.persist(); } catch (_) { /* 対応外でも利用は継続 */ }
 }
 
-document.getElementById('pick').addEventListener('change', async event => {
-  const input = event.target;
-  const files = [...input.files];
-  input.value = '';
+const photoSavePrompt = document.getElementById('photoSavePrompt');
+let lastCapturedPhoto = null;
+
+async function addSelectedPhotos(files, captured = false) {
   const existing = await db.all();
   const available = Math.max(0, MAX_ITEMS - existing.length);
   if (!available) {
@@ -593,12 +593,14 @@ document.getElementById('pick').addEventListener('change', async event => {
   let added = 0;
   for (const file of selected) {
     try {
+      const prepared = await prepareImage(file);
       await db.add({
-        image: await prepareImage(file), audio: null, name: '', category: 'other',
+        image: prepared, audio: null, name: '', category: 'other',
         book: selectedBook === 'all' ? 'discoveries' : selectedBook,
         discoveredAt: new Date().toISOString().slice(0, 10),
         speech: null, soundMode: 'recording', voice: { ...DEFAULT_VOICE },
       });
+      if (captured && added === 0) lastCapturedPhoto = prepared;
       added += 1;
     } catch (_) {
       setStatus('開けない写真がありました');
@@ -607,6 +609,46 @@ document.getElementById('pick').addEventListener('change', async event => {
   await requestPersistentStorage();
   await renderList();
   setStatus(`${added}枚追加しました${files.length > available ? `（上限${MAX_ITEMS}枚）` : ''}`);
+  photoSavePrompt.hidden = !(captured && added && lastCapturedPhoto);
+}
+
+document.getElementById('pick').addEventListener('change', async event => {
+  const input = event.target;
+  const files = [...input.files];
+  input.value = '';
+  await addSelectedPhotos(files, false);
+});
+
+document.getElementById('cameraPick').addEventListener('change', async event => {
+  const input = event.target;
+  const files = [...input.files];
+  input.value = '';
+  await addSelectedPhotos(files, true);
+});
+
+document.getElementById('saveCapturedPhoto').addEventListener('click', async () => {
+  if (!lastCapturedPhoto) return;
+  const file = new File([lastCapturedPhoto], `zukan-photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ title: 'ずかんで撮った写真', files: [file] });
+      setStatus('共有画面で「画像を保存」を選ぶと写真アプリに残ります');
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus('写真を保存しました。ダウンロードから写真アプリへ追加してください');
+});
+
+document.getElementById('dismissPhotoSave').addEventListener('click', () => {
+  photoSavePrompt.hidden = true;
 });
 
 // --- 親モードの一覧・録音 ---
@@ -1045,6 +1087,10 @@ const recordPreview = document.getElementById('recordPreview');
 const recordRetry = document.getElementById('recordRetry');
 const recordSave = document.getElementById('recordSave');
 const recordCancel = document.getElementById('recordCancel');
+const trimStart = document.getElementById('trimStart');
+const trimEnd = document.getElementById('trimEnd');
+const trimStartValue = document.getElementById('trimStartValue');
+const trimEndValue = document.getElementById('trimEndValue');
 let activeRecording = null;
 let recordingDraft = null;
 
@@ -1052,6 +1098,68 @@ function formatDuration(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
   return `00:${String(seconds).padStart(2, '0')}`;
 }
+
+function formatTrimTime(seconds) { return `${Number(seconds).toFixed(1)}秒`; }
+
+async function decodeRecording(blob) {
+  audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+  await audioContext.resume();
+  return audioContext.decodeAudioData(await blob.arrayBuffer());
+}
+
+function encodeTrimmedWav(buffer, fromSeconds, toSeconds) {
+  const startFrame = Math.max(0, Math.floor(fromSeconds * buffer.sampleRate));
+  const endFrame = Math.min(buffer.length, Math.ceil(toSeconds * buffer.sampleRate));
+  const frameCount = Math.max(1, endFrame - startFrame);
+  const bytes = new ArrayBuffer(44 + frameCount * 2);
+  const view = new DataView(bytes);
+  const text = (offset, value) => [...value].forEach((character, index) => view.setUint8(offset + index, character.charCodeAt(0)));
+  text(0, 'RIFF'); view.setUint32(4, 36 + frameCount * 2, true); text(8, 'WAVE'); text(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, buffer.sampleRate, true); view.setUint32(28, buffer.sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true); text(36, 'data'); view.setUint32(40, frameCount * 2, true);
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index));
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    let sample = 0;
+    channels.forEach(channel => { sample += channel[startFrame + frame] || 0; });
+    sample = Math.max(-1, Math.min(1, sample / channels.length));
+    view.setInt16(44 + frame * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return new Blob([bytes], { type: 'audio/wav' });
+}
+
+async function trimmedRecordingBlob() {
+  if (!recordingDraft) return null;
+  const from = Number(trimStart.value);
+  const to = Number(trimEnd.value);
+  if (from <= .02 && to >= recordingDraft.duration - .02) return recordingDraft.blob;
+  const key = `${from.toFixed(2)}-${to.toFixed(2)}`;
+  if (recordingDraft.trimmedKey === key) return recordingDraft.trimmedBlob;
+  const buffer = recordingDraft.buffer || await decodeRecording(recordingDraft.blob);
+  recordingDraft.buffer = buffer;
+  recordingDraft.trimmedBlob = encodeTrimmedWav(buffer, from, to);
+  recordingDraft.trimmedKey = key;
+  return recordingDraft.trimmedBlob;
+}
+
+function updateTrimRange(changed) {
+  if (!recordingDraft) return;
+  let from = Number(trimStart.value);
+  let to = Number(trimEnd.value);
+  if (to - from < .2) {
+    if (changed === 'start') from = Math.max(0, to - .2);
+    else to = Math.min(recordingDraft.duration, from + .2);
+  }
+  trimStart.value = from;
+  trimEnd.value = to;
+  trimStartValue.textContent = formatTrimTime(from);
+  trimEndValue.textContent = formatTrimTime(to);
+  recordingTimer.textContent = formatTrimTime(to - from);
+  recordingDraft.trimmedKey = '';
+}
+
+trimStart.addEventListener('input', () => updateTrimRange('start'));
+trimEnd.addEventListener('input', () => updateTrimRange('end'));
 
 function closeRecordingSheet() {
   stopPlayback();
@@ -1125,7 +1233,14 @@ async function beginRecording(item) {
       setStatus('声を録音できませんでした。もう一度お試しください');
       return;
     }
-    recordingDraft = { item, blob: new Blob(chunks, { type: recorder.mimeType || 'audio/mp4' }) };
+    const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/mp4' });
+    let buffer = null;
+    let duration = Math.max(.2, (Date.now() - startedAt) / 1000);
+    try { buffer = await decodeRecording(blob); duration = buffer.duration; } catch (_) {}
+    recordingDraft = { item, blob, buffer, duration, trimmedKey: '', trimmedBlob: null };
+    trimStart.min = 0; trimStart.max = duration; trimStart.value = 0;
+    trimEnd.min = 0; trimEnd.max = duration; trimEnd.value = duration;
+    updateTrimRange('end');
     recordingLabel.textContent = '録音できました';
     recordingTitle.textContent = '声を確認してください';
     recordPreview.textContent = '▶ 声を聞く';
@@ -1137,8 +1252,17 @@ async function beginRecording(item) {
 }
 
 recordStop.addEventListener('click', stopRecording);
-recordPreview.addEventListener('click', () => {
-  if (recordingDraft) togglePlayback(recordingDraft.blob, recordPreview);
+recordPreview.addEventListener('click', async () => {
+  if (!recordingDraft) return;
+  recordPreview.disabled = true;
+  try {
+    const blob = await trimmedRecordingBlob();
+    if (blob) togglePlayback(blob, recordPreview);
+  } catch (_) {
+    setStatus('この録音はトリミングできません。録り直してお試しください');
+  } finally {
+    recordPreview.disabled = false;
+  }
 });
 recordRetry.addEventListener('click', () => {
   if (!recordingDraft) return;
@@ -1148,12 +1272,18 @@ recordRetry.addEventListener('click', () => {
 });
 recordSave.addEventListener('click', async () => {
   if (!recordingDraft) return;
-  recordingDraft.item.audio = recordingDraft.blob;
-  recordingDraft.item.soundMode = 'recording';
-  await db.put(recordingDraft.item);
-  closeRecordingSheet();
-  await renderList();
-  setStatus('声を保存しました。「声を聞く」で確認できます');
+  recordSave.disabled = true;
+  try {
+    recordingDraft.item.audio = await trimmedRecordingBlob();
+    recordingDraft.item.soundMode = 'recording';
+    await db.put(recordingDraft.item);
+    closeRecordingSheet();
+    await renderList();
+    setStatus('選んだ範囲の声を保存しました');
+  } catch (_) {
+    recordSave.disabled = false;
+    setStatus('声をトリミングできませんでした。範囲を戻すか録り直してください');
+  }
 });
 recordCancel.addEventListener('click', () => {
   if (activeRecording) {

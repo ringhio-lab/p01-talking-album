@@ -246,6 +246,8 @@
   .primary-action { grid-column: 1 / -1; min-height: 58px !important; border-color: transparent !important;
     background: var(--accent) !important; color: #fff !important; font-size: 16px !important;
     box-shadow: 0 9px 22px rgba(240,100,73,.24) !important; }
+  .camera-action { background: #3f6950 !important; box-shadow: 0 9px 22px rgba(63,105,80,.22) !important; }
+  .restore-action { grid-column: 1 / -1; }
   button:active, label.btn:active { transform: scale(.975); }
   button:disabled { opacity: .38; box-shadow: none; }
 
@@ -263,6 +265,12 @@
   #status { margin: 0 0 16px; padding: 11px 13px; border-radius: 13px; background: #fff4d9;
     color: #785c1c; font-size: 13px; line-height: 1.5; }
   #status:empty { display: none; }
+  #photoSavePrompt { margin: 0 0 16px; padding: 14px; border: 1px solid rgba(63,105,80,.18); border-radius: 17px; background: #edf5ed; }
+  #photoSavePrompt[hidden] { display: none; }
+  #photoSavePrompt p { margin: 0 0 10px; color: #385f48; font-size: 12px; line-height: 1.55; }
+  .photo-save-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  #saveCapturedPhoto { border: 0; background: #47765a; color: #fff; }
+  #dismissPhotoSave { border: 0; background: transparent; color: var(--muted); box-shadow: none; }
   .section-header { display: flex; align-items: baseline; justify-content: space-between;
     margin: 24px 2px 10px; }
   .section-header h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
@@ -315,6 +323,11 @@
   #recordingTitle { margin: 0; text-align: center; font-size: 24px; letter-spacing: -.035em; }
   #recordingTimer { margin: 18px 0 12px; text-align: center; font-size: 48px; font-weight: 750;
     font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+  .trim-controls { margin: 8px 0 18px; padding: 14px; border-radius: 18px; background: #f7f4ee; }
+  .trim-controls p { margin: 0 0 11px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 750; }
+  .trim-row { display: grid; grid-template-columns: 54px 1fr 48px; gap: 8px; align-items: center; margin-top: 9px; }
+  .trim-row label,.trim-row output { font-size: 12px; font-weight: 750; }
+  .trim-row output { text-align: right; color: #4c4a88; font-variant-numeric: tabular-nums; }
   .recording-pulse { width: 72px; height: 72px; margin: 4px auto 22px; border-radius: 50%;
     background: var(--accent); box-shadow: 0 0 0 0 rgba(240,100,73,.35); }
   #recordingSheet.recording .recording-pulse { animation: recording-pulse 1.35s ease-out infinite; }
@@ -494,11 +507,14 @@
     </div>
 
     <div class="action-panel">
-      <label class="btn primary-action">写真を追加
+      <label class="btn primary-action camera-action">カメラで撮る
+        <input id="cameraPick" type="file" accept="image/*" capture="environment" hidden>
+      </label>
+      <label class="btn">写真から選ぶ
         <input id="pick" type="file" accept="image/*" multiple hidden>
       </label>
       <button id="backup">バックアップ</button>
-      <label class="btn">バックアップから復元
+      <label class="btn restore-action">バックアップから復元
         <input id="restore" type="file" accept="application/json,.json" hidden>
       </label>
     </div>
@@ -514,6 +530,10 @@
       <p id="backupStatus">バックアップ履歴を確認しています。</p>
     </div>
     <div id="status" role="status" aria-live="polite"></div>
+    <div id="photoSavePrompt" hidden>
+      <p>撮った写真をiPhoneの「写真」にも残せます。</p>
+      <div class="photo-save-actions"><button id="saveCapturedPhoto">写真アプリにも保存</button><button id="dismissPhotoSave">あとで</button></div>
+    </div>
 
     <div class="section-header">
       <h2>写真の名前と声</h2>
@@ -530,6 +550,11 @@
     <h2 id="recordingTitle">名前を話してください</h2>
     <div id="recordingTimer">00:00</div>
     <div class="recording-pulse" aria-hidden="true"></div>
+    <div class="trim-controls review-only" id="trimControls">
+      <p>残したいところを選ぶ</p>
+      <div class="trim-row"><label for="trimStart">はじめ</label><input id="trimStart" type="range" min="0" max="1" step="0.05" value="0"><output id="trimStartValue">0.0秒</output></div>
+      <div class="trim-row"><label for="trimEnd">おわり</label><input id="trimEnd" type="range" min="0" max="1" step="0.05" value="1"><output id="trimEndValue">1.0秒</output></div>
+    </div>
     <div class="recording-actions">
       <button id="recordStop">■ 録音を終了</button>
       <button id="recordPreview" class="review-only">▶ 声を聞く</button>
@@ -602,6 +627,6 @@
   </div>
 </div>
 
-<script src="app.js?v=41"></script>
+<script src="app.js?v=42"></script>
 </body>
 </html>
