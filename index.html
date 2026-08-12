@@ -176,6 +176,11 @@
     color: #385f48; font-size: 12px; line-height: 1.6; }
   .privacy-mark { flex: 0 0 auto; width: 24px; height: 24px; display: grid; place-items: center;
     border-radius: 50%; background: rgba(71,118,90,.13); font-size: 12px; font-weight: 800; }
+  .storage-guide { margin: -3px 0 18px; padding: 14px; border: 1px solid rgba(79,94,129,.13);
+    border-radius: 17px; background: #f2f4fb; color: #48526c; font-size: 12px; line-height: 1.65; }
+  .storage-guide strong { display: block; margin-bottom: 5px; color: #303b57; font-size: 13px; }
+  .storage-guide p { margin: 0; }
+  .storage-guide p + p { margin-top: 6px; }
   #status { margin: 0 0 16px; padding: 11px 13px; border-radius: 13px; background: #fff4d9;
     color: #785c1c; font-size: 13px; line-height: 1.5; }
   #status:empty { display: none; }
@@ -381,11 +386,16 @@
       <span class="privacy-mark">✓</span>
       <span>写真・録音・作った声はこのスマホに保存されます。自然音声を作るときだけ、入力した文章を音声サービスへ送ります。</span>
     </div>
+    <div class="storage-guide" role="note" aria-label="保存についての注意">
+      <strong>保存について</strong>
+      <p>写真は最大30枚です。写真・録音・作った声は、このブラウザの中に保存されます。</p>
+      <p>Safariの履歴やWebサイトデータを消したとき、または端末の空き容量が少ないときは、データが消えることがあります。大切な内容は「バックアップ」で定期的に保存してください。</p>
+    </div>
     <div id="status" role="status" aria-live="polite"></div>
 
     <div class="section-header">
       <h2>写真と声</h2>
-      <span id="parentCount">0 / 20枚</span>
+      <span id="parentCount">0 / 30枚</span>
     </div>
     <div id="list"></div>
   </div>
@@ -468,6 +478,6 @@
   </div>
 </div>
 
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>
