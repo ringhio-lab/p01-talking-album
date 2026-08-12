@@ -37,15 +37,8 @@
   /* 子どもの画面。上端だけが親モードの隠し入口。 */
   header { position: relative; z-index: 2; height: calc(78px + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px); overflow: hidden; }
-  .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 13px 74px 8px 16px;
-    display: flex; align-items: center; gap: 10px; }
-  .kid-brand-mark { position: relative; width: 48px; height: 48px; display: block; flex: 0 0 auto;
-    border-radius: 50% 50% 46% 54%; background: #e99a67; box-shadow: 0 5px 14px rgba(87,64,40,.16);
-    transform: rotate(-3deg); }
-  .kid-brand-mark::before { content: ""; position: absolute; left: 10px; top: 12px; width: 28px; height: 22px;
-    border-radius: 3px 3px 12px 12px; background: #fff8e6; box-shadow: inset 0 -3px rgba(215,184,125,.18); }
-  .kid-brand-mark::after { content: ""; position: absolute; left: 23px; top: 13px; width: 2px; height: 18px;
-    border-radius: 2px; background: #d8b981; transform: rotate(-4deg); }
+  .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 15px 74px 8px 18px;
+    display: flex; align-items: center; }
   .kid-brand-copy { min-width: 0; }
   .kid-brand-copy b { display: block; color: #44362c; font-size: 21px; line-height: 1.1; letter-spacing: .03em; }
   .kid-brand-copy span { display: block; margin-top: 4px; color: #98734d; font-size: 11px; font-weight: 800; }
@@ -323,8 +316,7 @@
   @keyframes mascot-bob { 50% { transform: translateY(-5px) rotate(4deg); } }
   @keyframes active-wiggle { to { transform: rotate(3deg) scale(1.03); } }
   @media (max-width: 380px) {
-    .kid-brand { padding-left: 11px; gap: 8px; }
-    .kid-brand-mark { width: 43px; height: 43px; font-size: 24px; }
+    .kid-brand { padding-left: 13px; }
     .kid-brand-copy b { font-size: 17px; }
     .kid-brand-copy span { display: none; }
     #grid { gap: 11px; padding: 11px; }
@@ -338,7 +330,6 @@
 <body>
 <header id="hdr">
   <div class="kid-brand" aria-label="わくわくずかん">
-    <span class="kid-brand-mark" aria-hidden="true"></span>
     <span class="kid-brand-copy"><b>わくわく ずかん</b><span>しゃしんを タッチしてね！</span></span>
   </div>
 </header>
@@ -488,6 +479,6 @@
   </div>
 </div>
 
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>
