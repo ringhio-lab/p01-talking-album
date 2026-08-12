@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "talking-album-voice",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {"AZURE_SPEECH_REGION":"japaneast","ALLOWED_ORIGIN":"https://ringhio-lab.github.io"},
+  "secrets": {"required":["AZURE_SPEECH_KEY"]},
+  "observability": {"enabled":true,"head_sampling_rate":1}
+}

@@ -1,0 +1,1 @@
+{"name":"talking-album","private":true,"scripts":{"worker:types":"wrangler types","worker:check":"tsc --noEmit","worker:dev":"wrangler dev","worker:deploy":"wrangler deploy"},"devDependencies":{"@cloudflare/workers-types":"latest","typescript":"latest","wrangler":"latest"}}
