@@ -93,10 +93,6 @@ function voiceOf(item) {
   return { ...DEFAULT_VOICE, ...(item.voice || {}) };
 }
 
-function categoryLabel(value) {
-  return CATEGORIES.find(([key]) => key === value)?.[1] || CATEGORIES.at(-1)[1];
-}
-
 function hasSound(item) { return Boolean(item.audio || item.speech?.text); }
 
 function showModeMessage(message, duration = 1700) {
@@ -429,7 +425,10 @@ function openParent() {
   renderList().catch(() => setStatus('写真を読み込めませんでした'));
 }
 
-document.getElementById('emptyOpen').addEventListener('click', openParent);
+document.getElementById('emptyOpen').addEventListener('click', () => {
+  openParent();
+  document.getElementById('pick').click();
+});
 
 document.getElementById('close').addEventListener('click', async () => {
   if (activeRecording) stopRecording();
@@ -521,18 +520,41 @@ async function renderList() {
 
     const meta = document.createElement('div');
     meta.className = 'meta';
+    const fields = document.createElement('div');
+    fields.className = 'item-fields';
+    const nameLabel = document.createElement('label');
+    nameLabel.className = 'item-field';
+    nameLabel.innerHTML = '<span>しゃしんの名前</span>';
+    const nameInput = document.createElement('input');
+    nameInput.className = 'item-name-input';
+    nameInput.maxLength = 20;
+    nameInput.placeholder = '例：りんご、じいじ';
+    nameInput.value = item.name || '';
+    nameInput.addEventListener('change', async () => {
+      item.name = nameInput.value.trim();
+      await db.put(item);
+      setStatus('写真の名前を保存しました');
+    });
+    nameLabel.appendChild(nameInput);
+    const categoryLabelEl = document.createElement('label');
+    categoryLabelEl.className = 'item-field';
+    categoryLabelEl.innerHTML = '<span>グループ</span>';
+    const categorySelectEl = document.createElement('select');
+    categorySelectEl.className = 'item-category-select';
+    categorySelectEl.innerHTML = CATEGORIES.filter(([key]) => key !== 'all').map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+    categorySelectEl.value = item.category || 'other';
+    categorySelectEl.addEventListener('change', async () => {
+      item.category = categorySelectEl.value;
+      await db.put(item);
+      setStatus('グループを保存しました');
+    });
+    categoryLabelEl.appendChild(categorySelectEl);
+    fields.append(nameLabel, categoryLabelEl);
+    meta.appendChild(fields);
     const voiceState = document.createElement('span');
-    const title = document.createElement('strong');
-    title.className = 'item-title';
-    title.textContent = item.name || '名前なし';
-    meta.appendChild(title);
     voiceState.className = `voice-state${hasSound(item) ? ' has-voice' : ''}`;
     voiceState.textContent = item.soundMode === 'speech' && item.speech?.text ? '文字の声を使用中' : item.audio ? '録音した声を使用中' : item.speech?.text ? '文字の声あり' : '声はまだありません';
     meta.appendChild(voiceState);
-    const category = document.createElement('span');
-    category.className = 'category-badge';
-    category.textContent = categoryLabel(item.category || 'other');
-    meta.appendChild(category);
     row.appendChild(meta);
 
     const controls = document.createElement('div');
@@ -549,19 +571,19 @@ async function renderList() {
 
     if (item.audio) {
       const voicePlay = document.createElement('button');
-      voicePlay.textContent = '✨ 声のあそび';
+      voicePlay.textContent = '声をアレンジ';
       voicePlay.className = 'voice-play';
       voicePlay.addEventListener('click', () => openVoiceSheet(item));
       controls.appendChild(voicePlay);
     }
 
     const record = document.createElement('button');
-    record.textContent = item.audio ? '● 録り直す' : '● 声を録音';
+    record.textContent = item.audio ? '録音し直す' : '声を録音';
     record.addEventListener('click', () => beginRecording(item));
     controls.appendChild(record);
 
     const speechEdit = document.createElement('button');
-    speechEdit.textContent = item.speech?.text ? '✎ 文字の声を編集' : '⌨ 文字から声';
+    speechEdit.textContent = item.speech?.text ? '読み上げを編集' : '文字から読み上げ';
     speechEdit.className = 'speech-edit';
     speechEdit.addEventListener('click', () => openSpeechSheet(item));
     controls.appendChild(speechEdit);
@@ -723,7 +745,6 @@ voiceCancel.addEventListener('click', closeVoiceSheet);
 
 // --- 文字から読み上げる声 ---
 const speechSheet = document.getElementById('speechSheet');
-const speechName = document.getElementById('speechName');
 const speechText = document.getElementById('speechText');
 const speechCategory = document.getElementById('speechCategory');
 const speechSpeed = document.getElementById('speechSpeed');
@@ -751,7 +772,6 @@ function renderSpeechPreset() {
 function openSpeechSheet(item) {
   stopPlayback();
   speechEditingItem = item;
-  speechName.value = item.name || '';
   speechText.value = item.speech?.text || item.name || '';
   speechCategory.innerHTML = CATEGORIES.filter(([key]) => key !== 'all').map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
   speechCategory.value = item.category || 'other';
@@ -814,7 +834,7 @@ speechSave.addEventListener('click', async () => {
   } catch (_) {
     setStatus('通信できないため、iPhoneの読み上げ音声として保存します');
   }
-  speechEditingItem.name = speechName.value.trim() || text.replace(/[、。！？!?]/g, '').slice(0, 20);
+  if (!speechEditingItem.name?.trim()) speechEditingItem.name = text.replace(/[、。！？!?]/g, '').slice(0, 20);
   speechEditingItem.category = speechCategory.value;
   speechEditingItem.speech = { text, preset: speechPreset, speed: speechSpeedDraft, audio: generatedAudio };
   speechEditingItem.soundMode = 'speech';
