@@ -72,6 +72,21 @@
   .story-letter:nth-child(5n+4) { transform: rotate(1.8deg) translateY(1px); }
   .story-letter.space { width: .42em; }
   .kid-brand-copy > span { display: block; margin-top: 0; color: #765c42; font: 400 11px/1.15 var(--storybook-type); letter-spacing: .035em; }
+  /* 子どもが読む文字だけを、題字と同じ手書き・クレヨンの世界観へ揃える。 */
+  .kid-brand-copy > span, .book-tab span, .book-tab b, .kid-mode span,
+  #modeMessage, .card-name, #bigName, #bigHint, .empty-title, .empty-copy, #emptyOpen {
+    font-family: var(--storybook-type);
+  }
+  .book-tab span, .kid-mode span, #modeMessage, .card-name, #bigName, .empty-title, #emptyOpen {
+    -webkit-text-stroke: .65px currentColor;
+    paint-order: stroke fill;
+    text-shadow: .7px .35px 0 rgba(75,55,40,.24), -.45px .5px 0 rgba(255,248,224,.3);
+    filter: url("#crayon-edge");
+  }
+  .kid-brand-copy > span, .book-tab b, #bigHint, .empty-copy {
+    letter-spacing: .035em;
+    text-shadow: .45px .25px 0 rgba(75,55,40,.18);
+  }
   #parentEntry { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 10px;
     z-index: 16; width: auto; height: 46px; min-height: 46px; padding: 0 3px 0 12px; border: 0; border-radius: 999px;
     background: rgba(255,253,249,.86); color: #625e57; box-shadow: 0 4px 15px rgba(55,47,38,.11);
@@ -405,7 +420,7 @@
 </svg>
 <header id="hdr">
   <div class="kid-brand" aria-label="わくわくずかん">
-    <span class="kid-brand-copy"><img class="kid-brand-title" src="./crayon-title.svg?v=37" alt="わくわくずかん"><span>しゃしんを タッチしてね！</span></span>
+    <span class="kid-brand-copy"><img class="kid-brand-title" src="./crayon-title.svg?v=38" alt="わくわくずかん"><span>しゃしんを タッチしてね！</span></span>
   </div>
 </header>
 
@@ -568,6 +583,6 @@
   </div>
 </div>
 
-<script src="app.js?v=37"></script>
+<script src="app.js?v=38"></script>
 </body>
 </html>
