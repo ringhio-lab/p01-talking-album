@@ -391,7 +391,13 @@ try {
 } catch (_) { /* localStorageが使えなくても案内は表示する */ }
 
 function armLongPress(element) {
-  const start = () => {
+  let startX = 0;
+  let startY = 0;
+  const start = event => {
+    event.preventDefault();
+    startX = event.clientX ?? 0;
+    startY = event.clientY ?? 0;
+    if (event.pointerId !== undefined) element.setPointerCapture?.(event.pointerId);
     clearTimeout(longPressTimer);
     element.classList.add('holding');
     longPressTimer = setTimeout(() => {
@@ -403,13 +409,16 @@ function armLongPress(element) {
     clearTimeout(longPressTimer);
     element.classList.remove('holding');
   };
-  element.addEventListener('touchstart', start, { passive: true });
-  element.addEventListener('touchend', cancel);
-  element.addEventListener('touchcancel', cancel);
-  element.addEventListener('touchmove', cancel, { passive: true });
-  element.addEventListener('mousedown', start);
-  element.addEventListener('mouseup', cancel);
-  element.addEventListener('mouseleave', cancel);
+  const move = event => {
+    if (Math.hypot((event.clientX ?? startX) - startX, (event.clientY ?? startY) - startY) > 14) cancel();
+  };
+  element.addEventListener('pointerdown', start);
+  element.addEventListener('pointerup', cancel);
+  element.addEventListener('pointercancel', cancel);
+  element.addEventListener('lostpointercapture', cancel);
+  element.addEventListener('pointermove', move);
+  element.addEventListener('contextmenu', event => event.preventDefault());
+  element.addEventListener('dragstart', event => event.preventDefault());
   element.addEventListener('click', event => event.preventDefault());
 }
 armLongPress(parentEntry);
