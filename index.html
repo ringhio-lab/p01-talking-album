@@ -58,6 +58,7 @@
   .kid-brand { width: min(100%,540px); height: 78px; margin: 0 auto; padding: 15px 74px 8px 18px;
     display: flex; align-items: center; }
   .kid-brand-copy { min-width: 0; }
+  .kid-brand-title { display: block; width: min(100%,232px); height: auto; transform: rotate(-.4deg); }
   .kid-brand-copy b { position: relative; display: inline-flex; align-items: baseline; color: #67503e;
     font: 400 25px/1.08 var(--storybook-type); letter-spacing: .035em;
     text-shadow: 1px 0 rgba(81,65,51,.35), -1px 0 rgba(81,65,51,.2), 0 1px rgba(81,65,51,.24); }
@@ -70,7 +71,7 @@
   .story-letter:nth-child(5n+3) { transform: rotate(-.7deg); }
   .story-letter:nth-child(5n+4) { transform: rotate(1.8deg) translateY(1px); }
   .story-letter.space { width: .42em; }
-  .kid-brand-copy > span { display: block; margin-top: 8px; color: #765c42; font: 400 12px/1.2 var(--storybook-type); letter-spacing: .035em; }
+  .kid-brand-copy > span { display: block; margin-top: 0; color: #765c42; font: 400 11px/1.15 var(--storybook-type); letter-spacing: .035em; }
   #parentEntry { position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); right: 10px;
     z-index: 16; width: auto; height: 46px; min-height: 46px; padding: 0 3px 0 12px; border: 0; border-radius: 999px;
     background: rgba(255,253,249,.86); color: #625e57; box-shadow: 0 4px 15px rgba(55,47,38,.11);
@@ -404,7 +405,7 @@
 </svg>
 <header id="hdr">
   <div class="kid-brand" aria-label="わくわくずかん">
-    <span class="kid-brand-copy"><b class="crayon-render" aria-label="わくわく ずかん"><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter">わ</i><i class="story-letter">く</i><i class="story-letter space"> </i><i class="story-letter">ず</i><i class="story-letter">か</i><i class="story-letter">ん</i></b><span>しゃしんを タッチしてね！</span></span>
+    <span class="kid-brand-copy"><img class="kid-brand-title" src="./crayon-title.svg" alt="わくわくずかん"><span>しゃしんを タッチしてね！</span></span>
   </div>
 </header>
 
@@ -567,6 +568,6 @@
   </div>
 </div>
 
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>
