@@ -46,6 +46,18 @@ const db = {
   async put(item) { return tx(await openDb(), 'readwrite', store => store.put(item)); },
   async del(id) { return tx(await openDb(), 'readwrite', store => store.delete(id)); },
   async clear() { return tx(await openDb(), 'readwrite', store => store.clear()); },
+  async replaceAll(items) {
+    const handle = await openDb();
+    return new Promise((resolve, reject) => {
+      const transaction = handle.transaction(STORE, 'readwrite');
+      const store = transaction.objectStore(STORE);
+      store.clear();
+      items.forEach(item => store.add(item));
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error('復元を中止しました'));
+    });
+  },
 };
 
 const grid = document.getElementById('grid');
@@ -55,6 +67,7 @@ const bigImg = document.getElementById('bigImg');
 const bigName = document.getElementById('bigName');
 const parent = document.getElementById('parent');
 const statusEl = document.getElementById('status');
+const backupStatusEl = document.getElementById('backupStatus');
 const listEl = document.getElementById('list');
 const parentCount = document.getElementById('parentCount');
 const childTools = document.getElementById('childTools');
@@ -80,6 +93,15 @@ const BOOKS = [
   ['creatures', 'いきもの'],
   ['discoveries', 'みつけたもの'],
   ['free', 'じゆう'],
+];
+function demoPicture(background, foreground, drawing) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><rect width="600" height="600" rx="58" fill="${background}"/><circle cx="490" cy="105" r="55" fill="#fff7d8" opacity=".72"/><path d="M0 470 Q150 390 300 465 T600 445 V600 H0Z" fill="#fff8e8" opacity=".76"/>${drawing}<circle cx="85" cy="100" r="11" fill="#fff" opacity=".9"/><circle cx="115" cy="78" r="6" fill="#fff" opacity=".75"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.replaceAll('CURRENT_COLOR', foreground))}`;
+}
+const DEMO_ITEMS = [
+  { id: -1, demo: true, name: 'りんご', book: 'discoveries', soundMode: 'speech', speech: { text: 'りんご！', preset: 'woman', speed: .82 }, demoSrc: demoPicture('#f3d9bc','#d95f4f','<path d="M300 205 C235 170 165 225 178 335 C190 442 275 476 300 430 C329 477 413 441 424 333 C436 226 368 172 304 205Z" fill="CURRENT_COLOR"/><path d="M303 205 Q308 151 349 125" fill="none" stroke="#70523b" stroke-width="18" stroke-linecap="round"/><path d="M334 151 Q385 123 405 162 Q365 185 334 151Z" fill="#6f9568"/>') },
+  { id: -2, demo: true, name: 'ぞう', book: 'creatures', soundMode: 'speech', speech: { text: 'ぞうさん！', preset: 'man', speed: .8 }, demoSrc: demoPicture('#cfe2dc','#718fa0','<ellipse cx="300" cy="320" rx="142" ry="112" fill="CURRENT_COLOR"/><circle cx="206" cy="278" r="70" fill="#86a6b5"/><circle cx="394" cy="278" r="70" fill="#86a6b5"/><path d="M300 310 Q294 405 342 430" fill="none" stroke="CURRENT_COLOR" stroke-width="48" stroke-linecap="round"/><circle cx="257" cy="283" r="9" fill="#3f4850"/><circle cx="345" cy="283" r="9" fill="#3f4850"/>') },
+  { id: -3, demo: true, name: 'くるま', book: 'discoveries', soundMode: 'speech', speech: { text: 'くるま、ぶーぶー！', preset: 'anime', speed: .85 }, demoSrc: demoPicture('#d9e5c8','#e08157','<path d="M145 350 L184 260 Q196 231 230 231 H371 Q404 231 420 260 L458 350 Q485 356 485 395 V425 H115 V390 Q115 360 145 350Z" fill="CURRENT_COLOR"/><rect x="219" y="258" width="162" height="83" rx="18" fill="#d9f0f1"/><circle cx="190" cy="426" r="43" fill="#55545a"/><circle cx="410" cy="426" r="43" fill="#55545a"/>') },
 ];
 const SPEECH_PRESETS = {
   woman: { rate: 1.02, pitch: 1.25, repeat: 1 }, man: { rate: .9, pitch: .78, repeat: 1 },
@@ -122,6 +144,20 @@ function showModeMessage(message, duration = 1700) {
 }
 
 function setStatus(message) { statusEl.textContent = message; }
+function updateBackupStatus() {
+  let saved = '';
+  try { saved = localStorage.getItem('talking-album-last-backup') || ''; } catch (_) {}
+  if (!saved) {
+    backupStatusEl.textContent = 'バックアップ：まだ作成されていません';
+    return;
+  }
+  const date = new Date(saved);
+  backupStatusEl.textContent = `最終バックアップ：${date.toLocaleDateString('ja-JP')} ${date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
+}
+function rememberBackup() {
+  try { localStorage.setItem('talking-album-last-backup', new Date().toISOString()); } catch (_) {}
+  updateBackupStatus();
+}
 function objectUrl(blob, bucket = urls) {
   const url = URL.createObjectURL(blob);
   bucket.push(url);
@@ -133,7 +169,9 @@ async function renderGrid() {
   revokeAll(urls);
   const items = await db.all();
   grid.innerHTML = '';
-  const filtered = selectedBook === 'all' ? items : items.filter(item => bookOf(item) === selectedBook);
+  const showingDemo = items.length === 0;
+  const sourceItems = showingDemo ? DEMO_ITEMS : items;
+  const filtered = selectedBook === 'all' ? sourceItems : sourceItems.filter(item => bookOf(item) === selectedBook);
   empty.hidden = items.length > 0;
   childTools.classList.toggle('on', items.length > 0);
   bookShelf.classList.toggle('on', items.length > 0);
@@ -145,10 +183,11 @@ async function renderGrid() {
   for (const [index, item] of filtered.entries()) {
     const button = document.createElement('button');
     button.className = 'card';
+    if (item.demo) button.classList.add('demo-card');
     button.style.setProperty('--index', index);
     button.setAttribute('aria-label', item.name ? `${item.name}の写真` : hasSound(item) ? '写真を見る、声あり' : '写真を見る、声なし');
     const image = document.createElement('img');
-    image.src = objectUrl(item.image);
+    image.src = item.demoSrc || objectUrl(item.image);
     image.alt = '';
     button.appendChild(image);
     if (item.name?.trim()) {
@@ -436,6 +475,22 @@ big.addEventListener('click', () => {
 // --- 保護者モードへの入口 ---
 const parentEntry = document.getElementById('parentEntry');
 const adultGate = document.getElementById('adultGate');
+const adultGateCard = adultGate.querySelector('.adult-gate-card');
+const adultGateQuestion = document.getElementById('adultGateQuestion');
+const adultGateAnswers = document.getElementById('adultGateAnswers');
+let pendingParentAction = '';
+
+function openAdultGate(action = '') {
+  pendingParentAction = action;
+  const left = 2 + Math.floor(Math.random() * 5);
+  const right = 1 + Math.floor(Math.random() * 4);
+  const answer = left + right;
+  const choices = [...new Set([answer, answer + 1, Math.max(1, answer - 1)])].sort(() => Math.random() - .5);
+  adultGateQuestion.textContent = `${left} ＋ ${right} は いくつ？`;
+  adultGateAnswers.innerHTML = choices.map(value => `<button class="adult-answer" data-answer="${value}">${value}</button>`).join('');
+  adultGate.classList.add('on');
+  adultGateAnswers.querySelector('button')?.focus();
+}
 
 try {
   if (localStorage.getItem('talking-album-parent-hint-seen') === '1') {
@@ -445,12 +500,23 @@ try {
 
 parentEntry.addEventListener('click', event => {
   event.preventDefault();
-  adultGate.classList.add('on');
+  openAdultGate();
 });
 parentEntry.addEventListener('contextmenu', event => event.preventDefault());
-document.getElementById('adultGateOpen').addEventListener('click', () => {
+adultGateAnswers.addEventListener('click', event => {
+  const button = event.target.closest('[data-answer]');
+  if (!button) return;
+  const expected = adultGateQuestion.textContent.match(/(\d+) ＋ (\d+)/);
+  if (!expected || Number(button.dataset.answer) !== Number(expected[1]) + Number(expected[2])) {
+    adultGateCard.classList.remove('wrong');
+    requestAnimationFrame(() => adultGateCard.classList.add('wrong'));
+    return;
+  }
+  const action = pendingParentAction;
+  pendingParentAction = '';
   adultGate.classList.remove('on');
   openParent();
+  if (action === 'pick') document.getElementById('pick').click();
 });
 document.getElementById('adultGateCancel').addEventListener('click', () => adultGate.classList.remove('on'));
 adultGate.addEventListener('click', event => {
@@ -465,12 +531,12 @@ function openParent() {
   big.classList.remove('on');
   parent.classList.add('on');
   setStatus('');
+  updateBackupStatus();
   renderList().catch(() => setStatus('写真を読み込めませんでした'));
 }
 
 document.getElementById('emptyOpen').addEventListener('click', () => {
-  openParent();
-  document.getElementById('pick').click();
+  openAdultGate('pick');
 });
 
 document.getElementById('close').addEventListener('click', async () => {
@@ -624,7 +690,15 @@ async function renderList() {
       setStatus('グループを保存しました');
     });
     categoryLabelEl.appendChild(categorySelectEl);
-    fields.append(nameLabel, bookLabelEl, categoryLabelEl, dateLabelEl);
+    const extraFields = document.createElement('details');
+    extraFields.className = 'extra-fields';
+    const extraSummary = document.createElement('summary');
+    extraSummary.textContent = '日付・グループを設定';
+    const extraBody = document.createElement('div');
+    extraBody.className = 'extra-fields-body';
+    extraBody.append(categoryLabelEl, dateLabelEl);
+    extraFields.append(extraSummary, extraBody);
+    fields.append(nameLabel, bookLabelEl, extraFields);
     meta.appendChild(fields);
     const voiceState = document.createElement('span');
     voiceState.className = `voice-state${hasSound(item) ? ' has-voice' : ''}`;
@@ -1148,6 +1222,7 @@ document.getElementById('backup').addEventListener('click', async () => {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ title: 'ずかんのバックアップ', files: [file] });
+      rememberBackup();
       setStatus('バックアップを共有しました');
       return;
     } catch (error) {
@@ -1160,6 +1235,7 @@ document.getElementById('backup').addEventListener('click', async () => {
   link.download = file.name;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  rememberBackup();
   setStatus('バックアップを保存しました');
 });
 
@@ -1190,8 +1266,7 @@ document.getElementById('restore').addEventListener('change', async event => {
         voice: item.voice && typeof item.voice === 'object' ? { ...DEFAULT_VOICE, ...item.voice } : { ...DEFAULT_VOICE },
       });
     }
-    await db.clear();
-    for (const item of restored) await db.add(item);
+    await db.replaceAll(restored);
     await requestPersistentStorage();
     await renderList();
     setStatus(`${restored.length}枚をもどしました`);

@@ -13,10 +13,19 @@
 <style>
   @font-face {
     font-family: "WakuwakuCrayonStory";
-    src: url("./WakuwakuCrayonStory-Regular.woff2?v=1") format("woff2");
+    src: url("./WakuwakuCrayonStory-Core.woff2?v=1") format("woff2");
     font-display: swap;
     font-weight: 400;
     font-style: normal;
+    unicode-range: U+0000-024F, U+2000-206F, U+3000-30FF, U+FF00-FFEF;
+  }
+  @font-face {
+    font-family: "WakuwakuCrayonStory";
+    src: url("./WakuwakuCrayonStory-Kanji.woff2?v=1") format("woff2");
+    font-display: swap;
+    font-weight: 400;
+    font-style: normal;
+    unicode-range: U+3400-4DBF, U+4E00-9FFF;
   }
   .crayon-render {
     filter: url("#crayon-edge");
@@ -162,6 +171,9 @@
   .sound-badge svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .card .spark { position: absolute; z-index: 2; width: 11px; height: 11px; border-radius: 50%;
     background: var(--spark, #ffd45c); pointer-events: none; animation: sparkle .72s ease-out forwards; }
+  .card.demo-card::before { content: "おためし"; position: absolute; top: 9px; left: 9px; z-index: 2;
+    padding: 5px 8px; border-radius: 999px; background: rgba(255,250,235,.92); color: #71553f;
+    font: 400 10px/1 var(--storybook-type); box-shadow: 0 2px 7px rgba(55,47,38,.1); }
 
   #big { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
     visibility: hidden; opacity: 0; background: radial-gradient(circle at 50% 38%, #544487, #24223b 68%);
@@ -182,16 +194,17 @@
     border-radius: 28px; background: #fffaf0; box-shadow: 0 22px 60px rgba(40,34,27,.24); text-align: center; }
   .adult-gate-card h2 { margin: 0 0 8px; font-size: 21px; }
   .adult-gate-card p { margin: 0 0 19px; color: var(--muted); font-size: 13px; line-height: 1.6; }
-  .adult-gate-actions { display: grid; gap: 9px; }
-  #adultGateOpen { border: 0; background: #3f443e; color: #fff; }
+  .adult-gate-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
+  .adult-answer { min-height: 58px; border: 0; background: #3f443e; color: #fff; font-size: 20px; }
+  .adult-gate-card.wrong { animation: wrong-shake .35s ease; }
   #adultGateCancel { border: 0; background: #eee9df; box-shadow: none; }
 
-  #empty { position: fixed; inset: calc(62px + env(safe-area-inset-top,0px)) 22px 0; display: flex; align-items: center;
-    justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); text-align: center; }
+  #empty { width: min(calc(100% - 28px),512px); margin: 2px auto calc(22px + env(safe-area-inset-bottom,0px));
+    display: flex; align-items: center; justify-content: center; text-align: center; }
   #empty[hidden] { display: none; }
-  .empty-content { max-width: 310px; padding: 30px 22px 24px; border: 1px solid rgba(255,255,255,.75); border-radius: 32px;
+  .empty-content { width: 100%; max-width: 410px; padding: 18px 20px 17px; border: 1px solid rgba(255,255,255,.75); border-radius: 25px;
     background: rgba(255,252,241,.78); box-shadow: 0 20px 55px rgba(74,55,36,.13); backdrop-filter: blur(16px); }
-  .empty-visual { position: relative; width: 138px; height: 112px; margin: 0 auto 24px; }
+  .empty-visual { display: none; }
   .empty-card { position: absolute; width: 76px; height: 76px; border-radius: 22px;
     box-shadow: 0 9px 22px rgba(55,47,38,.12); }
   .empty-card.back { left: 4px; top: 16px; background: #a8bea3; transform: rotate(-10deg); }
@@ -200,10 +213,10 @@
   .empty-book { position: relative; width: 43px; height: 34px; border-radius: 4px 4px 12px 12px; background: #e99a67; }
   .empty-book::before { content: ""; position: absolute; inset: 4px 5px 5px; border-radius: 2px 2px 9px 9px; background: #fff5dc; }
   .empty-book::after { content: ""; position: absolute; left: 21px; top: 5px; width: 2px; height: 25px; background: #d7b579; transform: rotate(-3deg); }
-  .empty-title { margin: 0 -8px 10px; color: #684c39; font: 400 25px/1.25 var(--storybook-type);
+  .empty-title { margin: 0 -8px 6px; color: #684c39; font: 400 22px/1.25 var(--storybook-type);
     letter-spacing: .005em; white-space: nowrap; text-shadow: 1px 0 rgba(75,61,50,.14), -.5px .5px rgba(75,61,50,.16); transform: rotate(-.5deg); }
   .empty-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
-  #emptyOpen { min-width: 210px; min-height: 58px; margin-top: 20px; border: 0; background: #cf7056; color: #fff;
+  #emptyOpen { min-width: 210px; min-height: 54px; margin-top: 13px; border: 0; background: #cf7056; color: #fff;
     border-radius: 18px; font: 400 18px/1 var(--storybook-type); letter-spacing: .025em; box-shadow: 0 9px 22px rgba(118,63,47,.22); }
 
   /* 親の編集画面 */
@@ -246,6 +259,7 @@
   .storage-guide strong { display: block; margin-bottom: 5px; color: #303b57; font-size: 13px; }
   .storage-guide p { margin: 0; }
   .storage-guide p + p { margin-top: 6px; }
+  #backupStatus { margin-top: 9px; padding-top: 8px; border-top: 1px solid rgba(79,94,129,.13); font-weight: 750; }
   #status { margin: 0 0 16px; padding: 11px 13px; border-radius: 13px; background: #fff4d9;
     color: #785c1c; font-size: 13px; line-height: 1.5; }
   #status:empty { display: none; }
@@ -261,6 +275,9 @@
   .item img { width: 88px; height: 88px; object-fit: cover; border-radius: 17px; background: #e6e0d6; }
   .item .meta { min-width: 0; color: var(--muted); font-size: 12px; font-weight: 650; }
   .item-fields { display: grid; gap: 9px; margin-bottom: 9px; }
+  .extra-fields { grid-column: 1 / -1; border-top: 1px solid #ebe5dc; }
+  .extra-fields summary { padding: 10px 2px 2px; color: #716b62; cursor: pointer; font-size: 12px; font-weight: 750; }
+  .extra-fields-body { display: grid; gap: 9px; padding-top: 9px; }
   .item-field { display: grid; gap: 4px; }
   .item-field span { color: #706a61; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
   .item-name-input, .item-category-select, .item-date-input { width: 100%; min-width: 0; height: 39px; padding: 0 10px;
@@ -331,6 +348,8 @@
   .preset span { font-size: 22px; }
   .preset.selected { border-color: #716bb4; background: #eeecff; color: #3e3a79; box-shadow: 0 0 0 2px rgba(113,107,180,.12); }
   .voice-controls { display: grid; gap: 18px; margin: 20px 0; padding: 18px; border-radius: 20px; background: #f7f4ee; }
+  .voice-advanced { margin-top: 14px; border-top: 1px solid var(--line); }
+  .voice-advanced summary { padding: 14px 2px 0; color: var(--muted); font-size: 13px; font-weight: 750; cursor: pointer; }
   .range-row { display: grid; grid-template-columns: 72px 1fr 45px; gap: 10px; align-items: center; }
   .range-row label { font-size: 13px; font-weight: 750; }
   .range-row output { color: #4c4a88; text-align: right; font-size: 12px; font-weight: 750; }
@@ -441,7 +460,7 @@
     <p class="empty-title crayon-render">ずかんを つくろう！</p>
     <p class="empty-copy">すきな しゃしんと こえを<br>いれてみよう。</p>
     <button id="emptyOpen">しゃしんを いれる</button>
-    <p class="empty-copy" style="margin-top:14px">次回からは右上の鍵を<br>タップすると編集できます。</p>
+    <p class="empty-copy" style="margin-top:14px">つぎからは みぎうえの かぎを<br>タップすると へんしゅうできます。</p>
   </div>
 </div>
 
@@ -458,11 +477,9 @@
 <div id="adultGate" role="dialog" aria-modal="true" aria-labelledby="adultGateTitle">
   <div class="adult-gate-card">
     <h2 id="adultGateTitle">保護者・ご家族の方へ</h2>
-    <p>写真や声を追加・編集する画面を開きます。</p>
-    <div class="adult-gate-actions">
-      <button id="adultGateOpen">編集画面を開く</button>
-      <button id="adultGateCancel">もどる</button>
-    </div>
+    <p id="adultGateQuestion">表示された答えを選んでください。</p>
+    <div class="adult-gate-actions" id="adultGateAnswers"></div>
+    <button id="adultGateCancel">もどる</button>
   </div>
 </div>
 
@@ -494,6 +511,7 @@
       <strong>保存について</strong>
       <p>写真・録音・作った声は、このブラウザの中に保存されます。端末の空き容量に応じて最大300枚まで追加できます。</p>
       <p>Safariの履歴やWebサイトデータを消したとき、または端末の空き容量が少ないときは、データが消えることがあります。大切な内容は「バックアップ」で定期的に保存してください。</p>
+      <p id="backupStatus">バックアップ履歴を確認しています。</p>
     </div>
     <div id="status" role="status" aria-live="polite"></div>
 
@@ -534,7 +552,7 @@
       <button class="preset" data-preset="radio">電話のような声</button>
       <button class="preset" data-preset="echo">やまびこ</button>
     </div>
-    <div class="voice-controls">
+    <details class="voice-advanced"><summary>こまかく調整する</summary><div class="voice-controls">
       <div class="range-row"><label for="voicePitch">声の高さ</label><input id="voicePitch" type="range" min="-6" max="6" step="1" value="0"><output id="voicePitchValue">ふつう</output></div>
       <div class="range-row"><label for="voiceRate">声の速さ</label><input id="voiceRate" type="range" min="0.7" max="1.35" step="0.05" value="1"><output id="voiceRateValue">ふつう</output></div>
       <div class="range-row"><label for="voiceVolume">音量</label><input id="voiceVolume" type="range" min="0.6" max="1.8" step="0.1" value="1"><output id="voiceVolumeValue">ふつう</output></div>
@@ -545,6 +563,7 @@
       <button class="pattern" data-pattern="twice">2回</button>
       <button class="pattern" data-pattern="three">3回</button>
     </div>
+    </details>
     <div class="voice-sheet-actions">
       <button id="voiceTry">▶ ためす</button><button id="voiceSave">これにする</button>
       <button id="voiceCancel">キャンセル</button>
@@ -583,6 +602,6 @@
   </div>
 </div>
 
-<script src="app.js?v=39"></script>
+<script src="app.js?v=41"></script>
 </body>
 </html>
