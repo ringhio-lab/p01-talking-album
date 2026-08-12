@@ -148,7 +148,9 @@ function speechSettings(speech) {
     const choices = Object.keys(SPEECH_PRESETS).filter(key => key !== 'random');
     preset = choices[Math.floor(Math.random() * choices.length)];
   }
-  return { ...SPEECH_PRESETS[preset], ...(speech || {}), preset };
+  const settings = { ...SPEECH_PRESETS[preset], ...(speech || {}), preset };
+  settings.rate *= speech?.speed ?? .85;
+  return settings;
 }
 
 function speakText(text, speech = {}, onEnded = () => {}) {
@@ -685,12 +687,23 @@ const speechSheet = document.getElementById('speechSheet');
 const speechName = document.getElementById('speechName');
 const speechText = document.getElementById('speechText');
 const speechCategory = document.getElementById('speechCategory');
+const speechSpeed = document.getElementById('speechSpeed');
+const speechSpeedValue = document.getElementById('speechSpeedValue');
 const speechTry = document.getElementById('speechTry');
 const speechSave = document.getElementById('speechSave');
 const speechRemove = document.getElementById('speechRemove');
 const speechCancel = document.getElementById('speechCancel');
 let speechEditingItem = null;
 let speechPreset = 'woman';
+let speechSpeedDraft = .85;
+
+function speechSpeedLabel(value) {
+  const speed = Number(value);
+  if (speed <= .65) return 'とてもゆっくり';
+  if (speed <= .8) return 'ゆっくり';
+  if (speed <= .95) return 'ふつう';
+  return 'はやめ';
+}
 
 function renderSpeechPreset() {
   document.querySelectorAll('.speech-preset').forEach(button => button.classList.toggle('selected', button.dataset.speechPreset === speechPreset));
@@ -704,6 +717,9 @@ function openSpeechSheet(item) {
   speechCategory.innerHTML = CATEGORIES.filter(([key]) => key !== 'all').map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
   speechCategory.value = item.category || 'other';
   speechPreset = item.speech?.preset || 'woman';
+  speechSpeedDraft = Number(item.speech?.speed ?? .85);
+  speechSpeed.value = speechSpeedDraft;
+  speechSpeedValue.textContent = speechSpeedLabel(speechSpeedDraft);
   renderSpeechPreset();
   speechSheet.classList.add('on');
 }
@@ -719,11 +735,16 @@ document.querySelectorAll('.speech-preset').forEach(button => button.addEventLis
   renderSpeechPreset();
 }));
 
+speechSpeed.addEventListener('input', () => {
+  speechSpeedDraft = Number(speechSpeed.value);
+  speechSpeedValue.textContent = speechSpeedLabel(speechSpeedDraft);
+});
+
 speechTry.addEventListener('click', () => {
   const text = speechText.value.trim();
   if (!text) { setStatus('読み上げることばを入力してください'); return; }
   stopPlayback();
-  speakText(text, { preset: speechPreset });
+  speakText(text, { preset: speechPreset, speed: speechSpeedDraft });
 });
 
 speechSave.addEventListener('click', async () => {
@@ -732,7 +753,7 @@ speechSave.addEventListener('click', async () => {
   if (!text) { setStatus('読み上げることばを入力してください'); speechText.focus(); return; }
   speechEditingItem.name = speechName.value.trim() || text.replace(/[、。！？!?]/g, '').slice(0, 20);
   speechEditingItem.category = speechCategory.value;
-  speechEditingItem.speech = { text, preset: speechPreset };
+  speechEditingItem.speech = { text, preset: speechPreset, speed: speechSpeedDraft };
   speechEditingItem.soundMode = 'speech';
   await db.put(speechEditingItem);
   closeSpeechSheet();
@@ -964,7 +985,7 @@ document.getElementById('restore').addEventListener('change', async event => {
         audio: item.audio ? await dataUrlToBlob(item.audio) : null,
         name: typeof item.name === 'string' ? item.name : '',
         category: CATEGORIES.some(([key]) => key === item.category) ? item.category : 'other',
-        speech: item.speech?.text ? { text: String(item.speech.text).slice(0, 80), preset: SPEECH_PRESETS[item.speech.preset] ? item.speech.preset : 'woman' } : null,
+        speech: item.speech?.text ? { text: String(item.speech.text).slice(0, 80), preset: SPEECH_PRESETS[item.speech.preset] ? item.speech.preset : 'woman', speed: Math.min(1.15, Math.max(.55, Number(item.speech.speed ?? .85))) } : null,
         soundMode: item.soundMode === 'speech' ? 'speech' : 'recording',
         voice: item.voice && typeof item.voice === 'object' ? { ...DEFAULT_VOICE, ...item.voice } : { ...DEFAULT_VOICE },
       });

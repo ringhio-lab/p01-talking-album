@@ -250,6 +250,9 @@
   .speech-presets { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
   .speech-preset { min-height: 51px; padding: 8px; background: #f7f4ee; box-shadow: none; font-size: 13px; }
   .speech-preset.selected { border-color: #4f94ad; background: #eaf5f7; color: #285a70; }
+  .speech-speed { margin-top: 15px; padding: 12px 13px; border-radius: 15px; background: #f8f5ef; }
+  .speech-speed label { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); font-size: 13px; font-weight: 750; }
+  #speechSpeed { width: 100%; margin-top: 11px; accent-color: #357d99; }
   .speech-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 19px; }
   #speechTry { background: #eaf5f7; color: #285a70; }
   #speechSave { border-color: transparent; background: #357d99; color: #fff; }
@@ -404,6 +407,10 @@
       <button class="speech-preset" data-speech-preset="slow">🐢 のんびり</button>
       <button class="speech-preset" data-speech-preset="random">🎲 おまかせ</button>
     </div>
+    <div class="speech-speed">
+      <label for="speechSpeed"><span>読み上げる速さ</span><output id="speechSpeedValue">ふつう</output></label>
+      <input id="speechSpeed" type="range" min="0.55" max="1.15" step="0.05" value="0.85">
+    </div>
     <div class="speech-actions">
       <button id="speechTry">▶ ためす</button><button id="speechSave">これにする</button>
       <button id="speechRemove">文字の声を削除</button><button id="speechCancel">キャンセル</button>
@@ -411,6 +418,6 @@
   </div>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>
